@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kho Dữ Liệu Số - Hệ Thống Quan Sát Xưởng Sản Xuất</title>
     
-    <!-- THƯ VIỆN FIREBASE COMPAT -->
+    <!-- THƯ VIỆN FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
@@ -68,16 +68,27 @@
 
         /* WHITEBOARD VIEW */
         #whiteboard-view { display: none; width: 100vw; height: calc(100vh - 65px); position: relative; background: var(--bg-canvas); overflow: hidden; }
+        
+        /* THANH CÔNG CỤ CÓ THỂ DI CHUYỂN & THU PHÓNG */
         .wb-toolbar {
             position: fixed; top: 75px; left: 50%; transform: translateX(-50%);
             background: #ffffff; border: 2px solid var(--wb-border); border-radius: 10px;
-            padding: 8px 12px; display: flex; gap: 10px; align-items: center; z-index: 2000;
+            padding: 6px 10px; display: flex; gap: 8px; align-items: center; z-index: 2000;
             box-shadow: 0 4px 20px rgba(0,0,0,0.2); user-select: none;
+            touch-action: none; transform-origin: top left;
         }
+        .wb-drag-handle {
+            cursor: move; padding: 4px 8px; font-weight: bold; color: #64748b; font-size: 16px;
+            background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; display: flex; align-items: center;
+        }
+        .wb-drag-handle:hover { background: #e2e8f0; color: #0f172a; }
         .wb-tool-group { display: flex; align-items: center; gap: 6px; }
         .wb-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
         .wb-btn.active { background: var(--accent-color); color: #fff; }
         .wb-btn-back { background: var(--primary) !important; color: #fff !important; }
+        .wb-scale-group { display: flex; gap: 4px; border-left: 1px solid #cbd5e1; padding-left: 8px; align-items: center; }
+        .wb-scale-btn { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .wb-scale-btn:hover { background: #e2e8f0; }
 
         #canvas-viewport { width: 100%; height: 100%; cursor: grab; position: absolute; top: 0; left: 0; }
         #canvas-viewport:active { cursor: grabbing; }
@@ -161,11 +172,16 @@
 
     <!-- WHITEBOARD VIEW (CHỈ XEM + GỬI GÓP Ý) -->
     <div id="whiteboard-view">
-        <div class="wb-toolbar">
+        <div class="wb-toolbar" id="wb-toolbar-el">
+            <div class="wb-drag-handle" title="Nhấp giữ để kéo di chuyển">⋮⋮</div>
             <div class="wb-tool-group">
                 <button class="wb-btn wb-btn-back" onclick="closeWhiteboard()">🔙 Trang Chủ</button>
                 <button class="wb-btn active" id="btn-layout-canvas" onclick="setWbLayout('canvas')">🌐 Tự do</button>
                 <button class="wb-btn" id="btn-layout-classic" onclick="setWbLayout('classic')">📋 Cổ Điển</button>
+            </div>
+            <div class="wb-scale-group">
+                <button class="wb-scale-btn" onclick="changeToolbarScale(0.1)" title="Phóng to thanh công cụ">🔍+</button>
+                <button class="wb-scale-btn" onclick="changeToolbarScale(-0.1)" title="Thu nhỏ thanh công cụ">🔍-</button>
             </div>
         </div>
 
@@ -210,7 +226,7 @@
     </div>
 
     <script>
-        // CẤU HÌNH FIREBASE ĐÃ ĐƯỢC CHUẨN HÓA
+        // CẤU HÌNH FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBTEags0dUwod8q24kxTpj1l5ZC0f5Znk8",
             authDomain: "kho-du-lieu-so-xuong.firebaseapp.com",
@@ -246,10 +262,6 @@
         function openLightbox(src) { if(!src) return; document.getElementById('lightbox-img').src = src; document.getElementById('lightbox-modal').style.display = 'flex'; }
         function closeLightbox() { document.getElementById('lightbox-modal').style.display = 'none'; }
 
-        // Render mặc định ban đầu
-        applySettings(defaultSettings);
-        renderMachines(defaultMachines);
-
         // Lắng nghe thay đổi cài đặt từ Firebase Realtime Database
         db.ref('settings').on('value', (snapshot) => {
             const s = snapshot.val() || defaultSettings;
@@ -282,7 +294,6 @@
 
         function renderMachines(machines) {
             const container = document.getElementById('machines-container');
-            if (!container) return;
             container.innerHTML = machines.map(m => `
                 <div class="card">
                     ${m.image ? `<div class="card-media"><img src="${m.image}" alt="${m.name}" onclick="openLightbox(this.src)"></div>` : ''}
@@ -329,7 +340,10 @@
             loadWbData(id || 'default');
             if (name) { wbState.siteTitle = "SƠ ĐỒ: " + name; }
             document.getElementById('classic-banner-title').innerText = wbState.siteTitle;
-            setTimeout(renderWb, 100);
+            setTimeout(() => {
+                renderWb();
+                initDraggableToolbar();
+            }, 100);
         }
 
         function closeWhiteboard() {
@@ -564,7 +578,6 @@
         function closeMediaModal() { document.getElementById('media-viewer-modal').style.display = 'none'; }
 
         function setupPanZoom() {
-            if (!canvasViewport) return;
             canvasViewport.addEventListener('mousedown', e => { if(e.target.closest('.c-node-card')) return; isDragging=true; startX=e.clientX-panX; startY=e.clientY-panY; });
             window.addEventListener('mousemove', e => { if(!isDragging) return; panX=e.clientX-startX; panY=e.clientY-startY; updateTransform(); });
             window.addEventListener('mouseup', () => isDragging=false);
@@ -575,6 +588,76 @@
         function zoomIn() { scale = Math.min(scale+0.2, 2.5); updateTransform(); }
         function zoomOut() { scale = Math.max(scale-0.2, 0.3); updateTransform(); }
         function resetZoom() { scale = 0.85; panX = 80; panY = 60; updateTransform(); }
+
+        /* XỬ LÝ KÉO THẢ DI CHUYỂN & THU PHÓNG THANH CÔNG CỤ (WB-TOOLBAR) */
+        let tbScale = 1.0;
+        let tbPosX = 0, tbPosY = 0;
+        let isTbDragging = false;
+        let tbStartX = 0, tbStartY = 0;
+        let isTbInitialized = false;
+
+        function initDraggableToolbar() {
+            const toolbar = document.getElementById('wb-toolbar-el');
+            if (!toolbar) return;
+            const dragHandle = toolbar.querySelector('.wb-drag-handle');
+
+            if (!isTbInitialized) {
+                const rect = toolbar.getBoundingClientRect();
+                tbPosX = rect.left;
+                tbPosY = rect.top;
+                isTbInitialized = true;
+            }
+
+            updateToolbarTransform();
+
+            const startDrag = (e) => {
+                isTbDragging = true;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                tbStartX = clientX - tbPosX;
+                tbStartY = clientY - tbPosY;
+
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('touchmove', onDrag, { passive: false });
+                document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('touchend', stopDrag);
+            };
+
+            const onDrag = (e) => {
+                if (!isTbDragging) return;
+                if (e.cancelable) e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                tbPosX = clientX - tbStartX;
+                tbPosY = clientY - tbStartY;
+                updateToolbarTransform();
+            };
+
+            const stopDrag = () => {
+                isTbDragging = false;
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('touchmove', onDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchend', stopDrag);
+            };
+
+            dragHandle.onclick = null;
+            dragHandle.onmousedown = startDrag;
+            dragHandle.ontouchstart = (e) => startDrag(e);
+        }
+
+        function updateToolbarTransform() {
+            const toolbar = document.getElementById('wb-toolbar-el');
+            if (!toolbar) return;
+            toolbar.style.left = `${tbPosX}px`;
+            toolbar.style.top = `${tbPosY}px`;
+            toolbar.style.transform = `scale(${tbScale})`;
+        }
+
+        function changeToolbarScale(delta) {
+            tbScale = Math.min(Math.max(0.6, tbScale + delta), 2.0);
+            updateToolbarTransform();
+        }
 
         window.onload = () => { setupPanZoom(); };
     </script>
