@@ -28,15 +28,13 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
         body { background-color: var(--bg); color: var(--text-main); overflow-x: hidden; padding-top: 65px; }
 
-        /* HEADER CỐ ĐỊNH HOÀN TOÀN */
+        /* HEADER CỐ ĐỊNH */
         header {
             background-color: var(--primary);
             color: var(--secondary);
             padding: 10px 16px;
             position: fixed; 
-            top: 0; 
-            left: 0; 
-            right: 0;
+            top: 0; left: 0; right: 0;
             height: 65px;
             z-index: 1000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -77,50 +75,58 @@
             width: 100vw; 
             height: calc(100vh - 65px); 
             position: fixed; 
-            top: 65px; 
-            left: 0; 
+            top: 65px; left: 0; 
             background: var(--bg-canvas); 
             overflow: hidden; 
             z-index: 900;
         }
         
-        /* THANH CÔNG CỤ DI CHUYỂN */
+        /* THANH CÔNG CỤ TỐI ƯU MOBILE */
         .wb-toolbar {
-            position: fixed; top: 75px; left: 50%; transform: translateX(-50%);
+            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
             background: #ffffff; border: 2px solid var(--wb-border); border-radius: 10px;
-            padding: 6px 10px; display: flex; gap: 6px; align-items: center; z-index: 2000;
+            padding: 4px 6px; display: flex; gap: 4px; align-items: center; z-index: 2000;
             box-shadow: 0 4px 20px rgba(0,0,0,0.2); user-select: none;
-            touch-action: none; transform-origin: top left;
-            max-width: 95vw; transition: all 0.2s ease-in-out;
+            touch-action: none; max-width: 96vw; width: max-content; overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
-        .wb-toolbar.collapsed .wb-tool-group {
-            display: none !important;
-        }
+        .wb-toolbar::-webkit-scrollbar { display: none; }
+        .wb-toolbar.collapsed .wb-tool-group { display: none !important; }
+        
         .wb-drag-handle {
-            cursor: move; padding: 6px 10px; font-weight: bold; color: #64748b; font-size: 16px;
-            background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; display: flex; align-items: center; touch-action: none;
+            cursor: move; padding: 4px 6px; font-weight: bold; color: #64748b; font-size: 14px;
+            background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; display: flex; align-items: center; touch-action: none; flex-shrink: 0;
         }
         .wb-btn-toggle {
             background: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a;
-            padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700;
+            padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; flex-shrink: 0;
         }
-        .wb-btn-toggle:hover { background: #e2e8f0; }
-        .wb-tool-group { display: flex; align-items: center; gap: 6px; }
-        .wb-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
-        .wb-btn.active { background: var(--accent-color); color: #fff; }
-        .wb-btn-back { background: var(--primary) !important; color: #fff !important; }
+        .wb-tool-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        
+        .wb-btn { 
+            background: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a; 
+            padding: 6px 10px; border-radius: 6px; cursor: pointer; 
+            font-size: 11px; font-weight: 600; white-space: nowrap; 
+            display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+        }
+        .wb-btn.active { background: var(--accent-color); color: #fff; border-color: var(--accent-color); }
+        .wb-btn-back { background: var(--primary) !important; color: #fff !important; border-color: var(--primary-dark) !important; }
 
         #canvas-viewport { 
-            width: 100%; 
-            height: 100%; 
-            cursor: grab; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
+            width: 100%; height: 100%; 
+            cursor: grab; position: absolute; top: 0; left: 0; 
             touch-action: none;
         }
         #canvas-viewport:active { cursor: grabbing; }
-        #canvas-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; padding: 100px 80px 500px 80px; min-width: 4500px; }
+        
+        /* TỐI ƯU HÓA GPU VÀ HIỆU NĂNG CHO MÀN CHƠI CANVAS */
+        #canvas-world { 
+            position: absolute; top: 0; left: 0; 
+            transform-origin: 0 0; 
+            padding: 100px 80px 500px 80px; 
+            min-width: 4500px;
+            will-change: transform;
+        }
         #svg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
         .canvas-tree-root { position: relative; z-index: 2; }
 
@@ -131,7 +137,7 @@
         .c-node-card {
             border: 2px solid var(--wb-border); border-radius: 10px; padding: 10px 14px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 6px;
-            min-width: 250px; max-width: 320px; position: relative;
+            min-width: 240px; max-width: 300px; position: relative;
         }
         .lvl-0 { background: #1e1b4b; color: #ffffff; border-color: #4338ca; }
         .lvl-1 { background: #ef4444; color: #ffffff; border-color: #b91c1c; }
@@ -141,7 +147,7 @@
         .editable-text { font-size: 13px; font-weight: 700; width: 100%; word-break: break-word; line-height: 1.4; color: inherit; }
         .node-media-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
         .media-badge { font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); cursor: pointer; color: inherit; }
-        .toggle-badge { background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; font-weight: bold; font-size: 14px; }
+        .toggle-badge { background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; font-weight: bold; font-size: 14px; flex-shrink: 0; }
         .node-media { width: 100%; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); margin-top: 4px; max-height: 130px; object-fit: cover; cursor: zoom-in; }
 
         /* KHUNG GÓP Ý TƯƠNG TÁC */
@@ -158,33 +164,16 @@
 
         /* NÚT ĐIỀU KHIỂN THU PHÓNG */
         .zoom-controls { 
-            position: fixed; 
-            bottom: 20px; 
-            right: 15px; 
-            background: #ffffff; 
-            border: 2px solid var(--wb-border); 
-            border-radius: 12px; 
-            padding: 6px; 
-            display: flex; 
-            flex-wrap: wrap;
-            gap: 6px; 
-            z-index: 2000; 
+            position: fixed; bottom: 20px; right: 12px; 
+            background: #ffffff; border: 2px solid var(--wb-border); 
+            border-radius: 12px; padding: 4px 6px; 
+            display: flex; gap: 4px; z-index: 2000; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
-            max-width: 90vw;
         }
         .btn-zoom-action {
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            color: #0f172a;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a;
+            padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; gap: 4px;
         }
         .btn-zoom-action:active { background: #e2e8f0; }
 
@@ -229,12 +218,12 @@
 
     <!-- WHITEBOARD VIEW (CHẾ ĐỘ TỰ DO & CỔ ĐIỂN) -->
     <div id="whiteboard-view">
-        <!-- THANH CÔNG CỤ CÓ NÚT THU GỌN / MỞ RỘNG -->
+        <!-- THANH CÔNG CỤ TỐI ƯU -->
         <div class="wb-toolbar" id="wb-toolbar-el">
-            <div class="wb-drag-handle" title="Nhấp giữ để kéo thanh công cụ">⠇⠇</div>
+            <div class="wb-drag-handle" title="Nhấp giữ để kéo thanh công cụ">⠇</div>
             <button class="wb-btn-toggle" id="wb-toggle-btn" onclick="toggleToolbarCollapse()" title="Thu gọn thanh công cụ">◀</button>
             <div class="wb-tool-group" id="wb-tool-group">
-                <button class="wb-btn wb-btn-back" onclick="closeWhiteboard()">🔙 Trang Chủ</button>
+                <button class="wb-btn wb-btn-back" onclick="closeWhiteboard()">🏠 Trang Chủ</button>
                 <button class="wb-btn active" id="btn-layout-canvas" onclick="setWbLayout('canvas')">🌐 Tự do</button>
                 <button class="wb-btn" id="btn-layout-classic" onclick="setWbLayout('classic')">📋 Cổ Điển</button>
             </div>
@@ -362,7 +351,7 @@
             `).join('');
         }
 
-        /* WHITEBOARD (READ + COMMENT) */
+        /* WHITEBOARD DATA */
         const defaultWbData = {
             siteTitle: "SƠ ĐỒ VẬN HÀNH MÁY",
             tree: { id: 'root', text: 'SƠ ĐỒ QUY TRÌNH CHÍNH', expanded: true, children: [] }
@@ -415,19 +404,11 @@
             renderWb();
         }
 
-        /* THU GỌN / MỞ RỘNG THANH CÔNG CỤ TOOLBAR */
         function toggleToolbarCollapse() {
             const toolbar = document.getElementById('wb-toolbar-el');
             const btn = document.getElementById('wb-toggle-btn');
             toolbar.classList.toggle('collapsed');
-            
-            if (toolbar.classList.contains('collapsed')) {
-                btn.innerText = '▶';
-                btn.title = 'Mở rộng thanh công cụ';
-            } else {
-                btn.innerText = '◀';
-                btn.title = 'Thu gọn thanh công cụ';
-            }
+            btn.innerText = toolbar.classList.contains('collapsed') ? '▶' : '◀';
         }
 
         function findWbNode(node, id) {
@@ -459,11 +440,7 @@
 
         function goUpClassic() {
             let p = findParentWbNode(wbState.tree, currentClassicNodeId);
-            if (p) {
-                currentClassicNodeId = p.id;
-            } else {
-                currentClassicNodeId = 'root';
-            }
+            currentClassicNodeId = p ? p.id : 'root';
             renderWb();
             document.getElementById('classic-viewport').scrollTo(0,0);
         }
@@ -473,7 +450,7 @@
                 document.getElementById('canvas-viewport').style.display = 'block';
                 document.getElementById('classic-viewport').style.display = 'none';
                 document.getElementById('canvas-tree-root').innerHTML = buildCanvasHTML(wbState.tree, 0);
-                setTimeout(drawConnections, 40);
+                setTimeout(drawConnections, 30);
             } else {
                 document.getElementById('canvas-viewport').style.display = 'none';
                 document.getElementById('classic-viewport').style.display = 'block';
@@ -491,7 +468,7 @@
                 if (currentClassicNodeId !== 'root') {
                     contentHTML += `<div style="grid-column: 1 / -1;">${buildClassicCardHTML(activeNode, false)}</div>`;
                     if (activeNode.children && activeNode.children.length > 0) {
-                        contentHTML += `<div style="grid-column: 1 / -1; margin-top: 8px; margin-bottom: 8px; border-bottom: 2px dashed #cbd5e1; display: flex; justify-content: center;"><span style="background:var(--bg-canvas); padding: 0 10px; color:var(--text-muted); font-size: 13px; position:relative; top:10px;">Thư mục con</span></div>`;
+                        contentHTML += `<div style="grid-column: 1 / -1; margin: 8px 0; border-bottom: 2px dashed #cbd5e1; text-align: center;"><span style="background:var(--bg-canvas); padding: 0 10px; color:var(--text-muted); font-size: 13px; position:relative; top:10px;">Thư mục con</span></div>`;
                         contentHTML += activeNode.children.map(c => buildClassicCardHTML(c, true)).join('');
                     }
                 } else {
@@ -504,12 +481,8 @@
 
         function sendUserFeedback(nodeId, targetEl) {
             let inputEl = targetEl;
-            if (targetEl && targetEl.tagName === 'BUTTON') {
-                inputEl = targetEl.previousElementSibling;
-            }
-            if (!inputEl) {
-                inputEl = document.getElementById(`fb-input-${nodeId}`);
-            }
+            if (targetEl && targetEl.tagName === 'BUTTON') inputEl = targetEl.previousElementSibling;
+            if (!inputEl) inputEl = document.getElementById(`fb-input-${nodeId}`);
             if (!inputEl) return;
 
             const text = inputEl.value.trim();
@@ -521,12 +494,7 @@
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' ' + now.toLocaleDateString('vi-VN');
                 
-                node.feedbacks.push({
-                    id: Date.now(),
-                    text: text,
-                    time: timeStr
-                });
-
+                node.feedbacks.push({ id: Date.now(), text: text, time: timeStr });
                 db.ref('wb_data/' + currentWbMachineId).set(wbState);
             }
         }
@@ -645,9 +613,21 @@
 
         function closeMediaModal() { document.getElementById('media-viewer-modal').style.display = 'none'; }
 
-        /* HỆ THỐNG KÉO THẢ TỰ DO & CHỤM PHÓNG BẰNG CẢM ỨNG DI ĐỘNG */
+        /* TỐI ƯU HÓA KÉO CẢM ỨNG VỚI REQUESTANIMATIONFRAME - KHÔNG CÒN TRỄ / QUẸO */
         let initialPinchDistance = null;
         let initialScale = scale;
+        let isUpdating = false;
+
+        function updateTransform() { 
+            if (!isUpdating) {
+                requestAnimationFrame(() => {
+                    canvasWorld.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${scale})`; 
+                    drawConnections(); 
+                    isUpdating = false;
+                });
+                isUpdating = true;
+            }
+        }
 
         function setupPanZoom() {
             canvasViewport.addEventListener('mousedown', e => { 
@@ -668,7 +648,7 @@
 
             canvasViewport.addEventListener('wheel', e => { 
                 e.preventDefault(); 
-                scale = e.deltaY<0 ? Math.min(scale+0.08, 2.5) : Math.max(scale-0.08, 0.3); 
+                scale = e.deltaY < 0 ? Math.min(scale+0.08, 2.5) : Math.max(scale-0.08, 0.3); 
                 updateTransform(); 
             }, {passive:false});
 
@@ -715,17 +695,12 @@
             return Math.sqrt(dx * dx + dy * dy);
         }
 
-        function updateTransform() { 
-            canvasWorld.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; 
-            drawConnections(); 
-        }
-
-        /* NÚT THU PHÓNG BẢNG MÀN HÌNH */
+        /* NÚT THU PHÓNG */
         function zoomIn() { scale = Math.min(scale + 0.2, 2.5); updateTransform(); }
         function zoomOut() { scale = Math.max(scale - 0.2, 0.3); updateTransform(); }
         function resetZoom() { scale = 0.85; panX = 40; panY = 40; updateTransform(); }
 
-        /* KÉO THẢ THANH CÔNG CỤ WB-TOOLBAR */
+        /* KÉO THẢ THANH CÔNG CỤ TOOLBAR */
         let tbPosX = 0, tbPosY = 0;
         let isTbDragging = false;
         let tbStartX = 0, tbStartY = 0;
