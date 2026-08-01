@@ -91,12 +91,20 @@
             padding: 6px 10px; display: flex; gap: 6px; align-items: center; z-index: 2000;
             box-shadow: 0 4px 20px rgba(0,0,0,0.2); user-select: none;
             touch-action: none; transform-origin: top left;
-            max-width: 95vw; overflow-x: auto;
+            max-width: 95vw; transition: all 0.2s ease-in-out;
+        }
+        .wb-toolbar.collapsed .wb-tool-group {
+            display: none !important;
         }
         .wb-drag-handle {
             cursor: move; padding: 6px 10px; font-weight: bold; color: #64748b; font-size: 16px;
             background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; display: flex; align-items: center; touch-action: none;
         }
+        .wb-btn-toggle {
+            background: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a;
+            padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700;
+        }
+        .wb-btn-toggle:hover { background: #e2e8f0; }
         .wb-tool-group { display: flex; align-items: center; gap: 6px; }
         .wb-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
         .wb-btn.active { background: var(--accent-color); color: #fff; }
@@ -148,7 +156,7 @@
         .feedback-input-group input { flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; outline: none; }
         .feedback-input-group button { background: #0284c7; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; }
 
-        /* NÚT ĐIỀU KHIỂN THU PHÓNG VÀ GOM/THẢ */
+        /* NÚT ĐIỀU KHIỂN THU PHÓNG */
         .zoom-controls { 
             position: fixed; 
             bottom: 20px; 
@@ -221,14 +229,14 @@
 
     <!-- WHITEBOARD VIEW (CHẾ ĐỘ TỰ DO & CỔ ĐIỂN) -->
     <div id="whiteboard-view">
+        <!-- THANH CÔNG CỤ CÓ NÚT THU GỌN / MỞ RỘNG -->
         <div class="wb-toolbar" id="wb-toolbar-el">
-            <div class="wb-drag-handle" title="Nhấp giữ để kéo thanh công cụ">⋮⋮</div>
-            <div class="wb-tool-group">
+            <div class="wb-drag-handle" title="Nhấp giữ để kéo thanh công cụ">⠇⠇</div>
+            <button class="wb-btn-toggle" id="wb-toggle-btn" onclick="toggleToolbarCollapse()" title="Thu gọn thanh công cụ">◀</button>
+            <div class="wb-tool-group" id="wb-tool-group">
                 <button class="wb-btn wb-btn-back" onclick="closeWhiteboard()">🔙 Trang Chủ</button>
                 <button class="wb-btn active" id="btn-layout-canvas" onclick="setWbLayout('canvas')">🌐 Tự do</button>
                 <button class="wb-btn" id="btn-layout-classic" onclick="setWbLayout('classic')">📋 Cổ Điển</button>
-                <button class="wb-btn" onclick="collapseAll()" title="Rút gọn lại tất cả các nhánh con">📁 Gom lại</button>
-                <button class="wb-btn" onclick="expandAll()" title="Mở rộng tất cả các nhánh">📂 Thả ra</button>
             </div>
         </div>
 
@@ -239,10 +247,8 @@
                 <div id="canvas-tree-root" class="canvas-tree-root"></div>
             </div>
 
-            <!-- CỤM NÚT ĐIỀU KHIỂN DƯỚI GÓC MÀN HÌNH -->
+            <!-- CỤM NÚT ĐIỀU KHIỂN THU PHÓNG MÀN HÌNH -->
             <div class="zoom-controls">
-                <button class="btn-zoom-action" onclick="collapseAll()" style="color: #b91c1c;">📁 Gom lại</button>
-                <button class="btn-zoom-action" onclick="expandAll()" style="color: #0369a1;">📂 Thả ra</button>
                 <button class="btn-zoom-action" onclick="zoomIn()">🔍 Phóng ra</button>
                 <button class="btn-zoom-action" onclick="zoomOut()">🔍 Thu lại</button>
                 <button class="btn-zoom-action" onclick="resetZoom()">🎯 Mặc định</button>
@@ -409,6 +415,21 @@
             renderWb();
         }
 
+        /* THU GỌN / MỞ RỘNG THANH CÔNG CỤ TOOLBAR */
+        function toggleToolbarCollapse() {
+            const toolbar = document.getElementById('wb-toolbar-el');
+            const btn = document.getElementById('wb-toggle-btn');
+            toolbar.classList.toggle('collapsed');
+            
+            if (toolbar.classList.contains('collapsed')) {
+                btn.innerText = '▶';
+                btn.title = 'Mở rộng thanh công cụ';
+            } else {
+                btn.innerText = '◀';
+                btn.title = 'Thu gọn thanh công cụ';
+            }
+        }
+
         function findWbNode(node, id) {
             if (node.id === id) return node;
             if (node.children) { for(let child of node.children) { let f = findWbNode(child, id); if(f) return f; } }
@@ -428,32 +449,6 @@
         function toggleExpand(nodeId) {
             let n = findWbNode(wbState.tree, nodeId);
             if(n) { n.expanded = !n.expanded; renderWb(); }
-        }
-
-        /* TÍNH NĂNG GOM LẠI VÀ THẢ RA TOÀN BỘ CÁC CẤP CÂY SƠ ĐỒ */
-        function setNodeExpansionRecursive(node, isExpanded) {
-            if (!node) return;
-            node.expanded = isExpanded;
-            if (node.children && node.children.length > 0) {
-                node.children.forEach(child => setNodeExpansionRecursive(child, isExpanded));
-            }
-        }
-
-        // PHÓNG RA / THẢ RA: Mở hết toàn bộ các nhánh con
-        function expandAll() {
-            setNodeExpansionRecursive(wbState.tree, true);
-            renderWb();
-        }
-
-        // RÚT GỌN / GOM LẠI: Đóng tất cả các nhánh con, chỉ giữ lại nút gốc
-        function collapseAll() {
-            if (wbState.tree) {
-                wbState.tree.expanded = true; // Luôn giữ nút gốc hiển thị
-                if (wbState.tree.children) {
-                    wbState.tree.children.forEach(child => setNodeExpansionRecursive(child, false));
-                }
-            }
-            renderWb();
         }
 
         function enterClassicNode(nodeId) {
