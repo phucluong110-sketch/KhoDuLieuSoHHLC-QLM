@@ -659,20 +659,66 @@
         }
 
         function viewNodeMedia(nodeId, type) {
-            let n = findWbNode(wbState.tree, nodeId); if(!n) return;
-            const titleEl = document.getElementById('media-modal-title');
-            const contentEl = document.getElementById('media-modal-content');
+    let n = findWbNode(wbState.tree, nodeId); 
+    if(!n) return;
+    
+    const titleEl = document.getElementById('media-modal-title');
+    const contentEl = document.getElementById('media-modal-content');
 
-            if (type === 'video' && n.videoUrl) {
-                titleEl.innerText = '📹 Video Hướng Dẫn: ' + n.text;
-                let embedUrl = n.videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/");
-                contentEl.innerHTML = `<iframe src="${embedUrl}" style="width:100%; height:320px; border-radius:8px; border:none;" allowfullscreen></iframe>`;
-            } else if (type === 'pdf' && n.pdfUrl) {
-                titleEl.innerText = '📄 Tài Liệu Quy Trình PDF: ' + n.text;
-                contentEl.innerHTML = `<iframe src="${n.pdfUrl}" style="width:100%; height:420px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>`;
-            }
-            document.getElementById('media-viewer-modal').style.display = 'flex';
+    // XỬ LÝ XEM VIDEO
+    if (type === 'video' && n.videoUrl) {
+        titleEl.innerText = '📹 Video Hướng Dẫn: ' + n.text;
+        let rawUrl = n.videoUrl.trim();
+        let embedUrl = rawUrl;
+
+        // Tự động chuyển đổi link YouTube thường sang link Embed
+        if (rawUrl.includes("youtube.com") || rawUrl.includes("youtu.be")) {
+            embedUrl = rawUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").split('&')[0];
+            contentEl.innerHTML = `
+                <iframe src="${embedUrl}" style="width:100%; height:320px; border-radius:8px; border:none;" allowfullscreen></iframe>
+                <div style="margin-top:12px; text-align:center;">
+                    <a href="${rawUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">
+                        ↗ Mở Video Ở Trang Mới (Tab mới)
+                    </a>
+                </div>`;
+        } else {
+            // Video MP4 direct link hoặc Google Drive
+            contentEl.innerHTML = `
+                <video src="${rawUrl}" controls style="width:100%; max-height:360px; border-radius:8px; background:#000;"></video>
+                <div style="margin-top:12px; text-align:center;">
+                    <a href="${rawUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">
+                        ↗ Mở Video Trong Thẻ Mới
+                    </a>
+                </div>`;
         }
+    } 
+    // XỬ LÝ XEM TỆP TÀI LIỆU (PDF, WORD, EXCEL...)
+    else if (type === 'pdf' || type === 'doc') {
+        let fileUrl = n.pdfUrl || (n.docFile ? n.docFile.url : '');
+        if (!fileUrl) {
+            alert("Không tìm thấy đường dẫn tệp tin!");
+            return;
+        }
+        
+        titleEl.innerText = '📄 Tài Liệu Đính Kèm: ' + n.text;
+        
+        // Sử dụng Google Docs Viewer để xem trước tệp Word/Excel/PDF trên Web
+        let gviewUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+        
+        contentEl.innerHTML = `
+            <iframe src="${gviewUrl}" style="width:100%; height:420px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>
+            <div style="margin-top:12px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+                <a href="${fileUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">
+                    ↗ Mở Ở Trang Mới
+                </a>
+                <a href="${fileUrl}" download style="background:#16a34a; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">
+                    💾 Tải Tệp Về Máy
+                </a>
+            </div>`;
+    }
+    
+    document.getElementById('media-viewer-modal').style.display = 'flex';
+}
 
         function closeMediaModal() { document.getElementById('media-viewer-modal').style.display = 'none'; }
 
