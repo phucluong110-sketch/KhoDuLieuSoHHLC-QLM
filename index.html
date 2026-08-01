@@ -109,7 +109,7 @@
             position: absolute; 
             top: 0; 
             left: 0; 
-            touch-action: none; /* Ngăn trình duyệt cuộn trang khi chạm ngón tay */
+            touch-action: none;
         }
         #canvas-viewport:active { cursor: grabbing; }
         #canvas-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; padding: 100px 80px 500px 80px; min-width: 4500px; }
@@ -148,7 +148,7 @@
         .feedback-input-group input { flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; outline: none; }
         .feedback-input-group button { background: #0284c7; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; }
 
-        /* NÚT THU PHÓNG BẰNG CHỮ RÕ RÀNG CHO ĐIỆN THOẠI */
+        /* NÚT ĐIỀU KHIỂN THU PHÓNG VÀ GOM/THẢ */
         .zoom-controls { 
             position: fixed; 
             bottom: 20px; 
@@ -158,9 +158,11 @@
             border-radius: 12px; 
             padding: 6px; 
             display: flex; 
+            flex-wrap: wrap;
             gap: 6px; 
             z-index: 2000; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+            max-width: 90vw;
         }
         .btn-zoom-action {
             background: #f8fafc;
@@ -225,6 +227,8 @@
                 <button class="wb-btn wb-btn-back" onclick="closeWhiteboard()">🔙 Trang Chủ</button>
                 <button class="wb-btn active" id="btn-layout-canvas" onclick="setWbLayout('canvas')">🌐 Tự do</button>
                 <button class="wb-btn" id="btn-layout-classic" onclick="setWbLayout('classic')">📋 Cổ Điển</button>
+                <button class="wb-btn" onclick="collapseAll()" title="Rút gọn lại tất cả các nhánh con">📁 Gom lại</button>
+                <button class="wb-btn" onclick="expandAll()" title="Mở rộng tất cả các nhánh">📂 Thả ra</button>
             </div>
         </div>
 
@@ -235,8 +239,10 @@
                 <div id="canvas-tree-root" class="canvas-tree-root"></div>
             </div>
 
-            <!-- NÚT THU LẠI VÀ PHÓNG RA DỄ BẤM -->
+            <!-- CỤM NÚT ĐIỀU KHIỂN DƯỚI GÓC MÀN HÌNH -->
             <div class="zoom-controls">
+                <button class="btn-zoom-action" onclick="collapseAll()" style="color: #b91c1c;">📁 Gom lại</button>
+                <button class="btn-zoom-action" onclick="expandAll()" style="color: #0369a1;">📂 Thả ra</button>
                 <button class="btn-zoom-action" onclick="zoomIn()">🔍 Phóng ra</button>
                 <button class="btn-zoom-action" onclick="zoomOut()">🔍 Thu lại</button>
                 <button class="btn-zoom-action" onclick="resetZoom()">🎯 Mặc định</button>
@@ -422,6 +428,32 @@
         function toggleExpand(nodeId) {
             let n = findWbNode(wbState.tree, nodeId);
             if(n) { n.expanded = !n.expanded; renderWb(); }
+        }
+
+        /* TÍNH NĂNG GOM LẠI VÀ THẢ RA TOÀN BỘ CÁC CẤP CÂY SƠ ĐỒ */
+        function setNodeExpansionRecursive(node, isExpanded) {
+            if (!node) return;
+            node.expanded = isExpanded;
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => setNodeExpansionRecursive(child, isExpanded));
+            }
+        }
+
+        // PHÓNG RA / THẢ RA: Mở hết toàn bộ các nhánh con
+        function expandAll() {
+            setNodeExpansionRecursive(wbState.tree, true);
+            renderWb();
+        }
+
+        // RÚT GỌN / GOM LẠI: Đóng tất cả các nhánh con, chỉ giữ lại nút gốc
+        function collapseAll() {
+            if (wbState.tree) {
+                wbState.tree.expanded = true; // Luôn giữ nút gốc hiển thị
+                if (wbState.tree.children) {
+                    wbState.tree.children.forEach(child => setNodeExpansionRecursive(child, false));
+                }
+            }
+            renderWb();
         }
 
         function enterClassicNode(nodeId) {
@@ -618,12 +650,11 @@
 
         function closeMediaModal() { document.getElementById('media-viewer-modal').style.display = 'none'; }
 
-        /* HỆ THỐNG KÉO THẢ TỰ DO & CHỤM PHÓNG BẰNG CẢM ỨNG DI ĐỘNG (TOUCH EVENTS) */
+        /* HỆ THỐNG KÉO THẢ TỰ DO & CHỤM PHÓNG BẰNG CẢM ỨNG DI ĐỘNG */
         let initialPinchDistance = null;
         let initialScale = scale;
 
         function setupPanZoom() {
-            // Thao tác Chuột (Desktop)
             canvasViewport.addEventListener('mousedown', e => { 
                 if(e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls')) return; 
                 isDragging=true; 
@@ -646,7 +677,6 @@
                 updateTransform(); 
             }, {passive:false});
 
-            // Thao tác Cảm ứng Ngón tay (Mobile / Tablet)
             canvasViewport.addEventListener('touchstart', e => {
                 if (e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('input') || e.target.closest('button')) return;
 
@@ -695,7 +725,7 @@
             drawConnections(); 
         }
 
-        /* NÚT THU LẠI VÀ PHÓNG RA DÀNH CHO MÀN HÌNH CẢM ỨNG */
+        /* NÚT THU PHÓNG BẢNG MÀN HÌNH */
         function zoomIn() { scale = Math.min(scale + 0.2, 2.5); updateTransform(); }
         function zoomOut() { scale = Math.max(scale - 0.2, 0.3); updateTransform(); }
         function resetZoom() { scale = 0.85; panX = 40; panY = 40; updateTransform(); }
