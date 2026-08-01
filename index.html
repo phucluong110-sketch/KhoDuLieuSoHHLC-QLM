@@ -158,10 +158,10 @@
 
         .editable-text { font-size: 13px; font-weight: 700; width: 100%; word-break: break-word; line-height: 1.4; color: inherit; }
         .node-media-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-        .media-badge { font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); cursor: pointer; color: inherit; }
+        .media-badge { font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); cursor: pointer; color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .media-badge:hover { background: rgba(255,255,255,0.4); }
         .toggle-badge { background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; font-weight: bold; font-size: 14px; flex-shrink: 0; }
         
-        /* ĐÃ TỐI ƯU HIỂN THỊ HÌNH ẢNH TRÁNH BỊ CẮT XÉN */
         .node-media { 
             width: 100%; 
             border-radius: 6px; 
@@ -172,6 +172,12 @@
             background: #f1f5f9;
             cursor: zoom-in; 
         }
+
+        /* BẢNG DỮ LIỆU TRONG NHÁNH (ĐÃ ĐỒNG BỘ CSS) */
+        .node-table-wrapper { width: 100%; overflow-x: auto; margin-top: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); }
+        .node-table { width: 100%; border-collapse: collapse; font-size: 11px; background: #ffffff; color: #1f2937; }
+        .node-table th, .node-table td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; word-break: break-word; }
+        .node-table th { background: #f1f5f9; font-weight: bold; color: #0f172a; }
 
         /* KHUNG GÓP Ý */
         .node-feedback-box {
@@ -466,6 +472,25 @@
             document.getElementById('classic-viewport').scrollTo(0,0);
         }
 
+        /* HÀM RENDER BẢNG DỮ LIỆU Bổ SUNG */
+        function renderNodeTableHTML(tableData) {
+            if (!tableData || !tableData.headers || tableData.headers.length === 0) return '';
+            let html = '<div class="node-table-wrapper"><table class="node-table"><thead><tr>';
+            tableData.headers.forEach(h => {
+                html += `<th>${h || ''}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            (tableData.rows || []).forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${cell || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            return html;
+        }
+
         function renderWb() {
             if (wbLayout === 'canvas') {
                 document.getElementById('canvas-viewport').style.display = 'block';
@@ -551,6 +576,13 @@
             let lvl = `lvl-${Math.min(depth, 3)}`;
             let customStyle = node.bgColor ? `background-color: ${node.bgColor} !important; border-color: ${node.bgColor} !important;` : '';
 
+            let docBadge = '';
+            if (node.docFile && node.docFile.url) {
+                docBadge = `<a class="media-badge" href="${node.docFile.url}" download="${node.docFile.name || 'Tai-lieu'}">💾 ${node.docFile.name || 'Tải Tệp Đính Kèm'}</a>`;
+            } else if (node.pdfUrl) {
+                docBadge = `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 PDF</span>`;
+            }
+
             return `
                 <div class="c-branch" id="branch-${node.id}">
                     <div class="c-node-card ${lvl}" id="card-${node.id}" style="${customStyle}">
@@ -559,9 +591,10 @@
                             ${hasChild ? `<div class="toggle-badge" onclick="toggleExpand('${node.id}')">${node.expanded ? '−' : '+'}</div>` : ''}
                         </div>
                         ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)" onload="drawConnections()">` : ''}
+                        ${renderNodeTableHTML(node.tableData)}
                         <div class="node-media-badges">
                             ${node.videoUrl ? `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'video')">📹 Video</span>` : ''}
-                            ${node.pdfUrl ? `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 PDF</span>` : ''}
+                            ${docBadge}
                         </div>
                         ${renderFeedbackWidget(node)}
                     </div>
@@ -569,7 +602,6 @@
                 </div>`;
         }
 
-        /* HÀM BUILD CARD DÀNH CHO CỔ ĐIỂN ĐÃ ĐƯỢC TỐI ƯU CẤP ĐỘ PHÂN CẤP THẺ CON */
         function buildClassicCardHTML(node, isChildLink = true, depth = 1) {
             let hasChild = node.children && node.children.length > 0;
             let lvl = `lvl-${Math.min(depth, 3)}`;
@@ -578,6 +610,13 @@
             let clickAction = (isChildLink && hasChild) ? `onclick="enterClassicNode('${node.id}')" style="cursor:pointer;"` : ``;
             let toggleIcon = (isChildLink && hasChild) ? `<div style="font-size:11px; background:rgba(255,255,255,0.25); padding:4px 8px; border-radius:4px; font-weight:600; white-space:nowrap;">Xem chi tiết (${node.children.length}) ►</div>` : '';
 
+            let docBadge = '';
+            if (node.docFile && node.docFile.url) {
+                docBadge = `<a class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" href="${node.docFile.url}" download="${node.docFile.name || 'Tai-lieu'}">💾 Tải Tệp: ${node.docFile.name || 'Tài liệu'}</a>`;
+            } else if (node.pdfUrl) {
+                docBadge = `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 Đọc File PDF</span>`;
+            }
+
             return `
                 <div style="display:flex; flex-direction:column; gap:8px; background:var(--card-bg); padding:12px; border-radius:10px; border:1px solid var(--card-border); box-shadow:0 2px 8px rgba(0,0,0,0.06);">
                     <div class="classic-card-header ${lvl}" style="${customStyle}" ${clickAction}>
@@ -585,9 +624,10 @@
                         ${toggleIcon}
                     </div>
                     ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)">` : ''}
+                    ${renderNodeTableHTML(node.tableData)}
                     <div class="node-media-badges">
                         ${node.videoUrl ? `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'video')">📹 Xem Video Hướng Dẫn</span>` : ''}
-                        ${node.pdfUrl ? `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 Đọc File PDF</span>` : ''}
+                        ${docBadge}
                     </div>
                     ${renderFeedbackWidget(node)}
                 </div>`;
@@ -666,125 +706,89 @@
                 panY=e.clientY-startY; 
                 updateTransform(); 
             });
-            
+
             window.addEventListener('mouseup', () => isDragging=false);
 
             canvasViewport.addEventListener('wheel', e => { 
                 e.preventDefault(); 
-                scale = e.deltaY < 0 ? Math.min(scale+0.08, 2.5) : Math.max(scale-0.08, 0.3); 
+                scale = e.deltaY < 0 ? Math.min(scale + 0.08, 2.5) : Math.max(scale - 0.08, 0.3); 
                 updateTransform(); 
-            }, {passive:false});
+            }, {passive: false});
 
             canvasViewport.addEventListener('touchstart', e => {
-                if (e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('input') || e.target.closest('button')) return;
-
+                if (e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls')) return;
                 if (e.touches.length === 1) {
                     isDragging = true;
                     startX = e.touches[0].clientX - panX;
                     startY = e.touches[0].clientY - panY;
                 } else if (e.touches.length === 2) {
                     isDragging = false;
-                    initialPinchDistance = getPinchDistance(e.touches);
+                    initialPinchDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
                     initialScale = scale;
                 }
-            }, { passive: false });
+            }, {passive: true});
 
             canvasViewport.addEventListener('touchmove', e => {
-                if (e.target.closest('input') || e.target.closest('textarea')) return;
-
                 if (isDragging && e.touches.length === 1) {
-                    if (e.cancelable) e.preventDefault();
                     panX = e.touches[0].clientX - startX;
                     panY = e.touches[0].clientY - startY;
                     updateTransform();
                 } else if (e.touches.length === 2 && initialPinchDistance) {
-                    if (e.cancelable) e.preventDefault();
-                    const newDist = getPinchDistance(e.touches);
-                    const factor = newDist / initialPinchDistance;
-                    scale = Math.min(Math.max(initialScale * factor, 0.3), 2.5);
+                    const currentDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    scale = Math.min(Math.max(initialScale * (currentDist / initialPinchDistance), 0.3), 2.5);
                     updateTransform();
                 }
-            }, { passive: false });
+            }, {passive: true});
 
-            canvasViewport.addEventListener('touchend', e => {
-                if (e.touches.length < 2) { initialPinchDistance = null; }
-                if (e.touches.length === 0) { isDragging = false; }
+            canvasViewport.addEventListener('touchend', () => {
+                isDragging = false;
+                initialPinchDistance = null;
             });
         }
 
-        function getPinchDistance(touches) {
-            const dx = touches[0].clientX - touches[1].clientX;
-            const dy = touches[0].clientY - touches[1].clientY;
-            return Math.sqrt(dx * dx + dy * dy);
-        }
-
-        function zoomIn() { scale = Math.min(scale + 0.2, 2.5); updateTransform(); }
-        function zoomOut() { scale = Math.max(scale - 0.2, 0.3); updateTransform(); }
+        function zoomIn() { scale = Math.min(scale+0.2, 2.5); updateTransform(); }
+        function zoomOut() { scale = Math.max(scale-0.2, 0.3); updateTransform(); }
         function resetZoom() { scale = 0.85; panX = 40; panY = 40; updateTransform(); }
-
-        /* KÉO THẢ TOOLBAR VỚI GIỚI HẠN AN TOÀN KHOẢNG CÁCH */
-        let tbPosX = 0, tbPosY = 0;
-        let isTbDragging = false;
-        let tbStartX = 0, tbStartY = 0;
 
         function initDraggableToolbar() {
             const toolbar = document.getElementById('wb-toolbar-el');
-            if (!toolbar) return;
-            const dragHandle = toolbar.querySelector('.wb-drag-handle');
+            const handle = toolbar ? toolbar.querySelector('.wb-drag-handle') : null;
+            if (!handle) return;
 
-            toolbar.style.top = '70px';
-            toolbar.style.left = '50%';
-            toolbar.style.transform = 'translateX(-50%)';
+            let isTBDragging = false, tbStartX = 0, tbStartY = 0;
 
-            const startDrag = (e) => {
-                isTbDragging = true;
+            const onStart = (e) => {
+                isTBDragging = true;
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 const rect = toolbar.getBoundingClientRect();
-                
                 tbStartX = clientX - rect.left;
                 tbStartY = clientY - rect.top;
-
-                document.addEventListener('mousemove', onDrag);
-                document.addEventListener('touchmove', onDrag, { passive: false });
-                document.addEventListener('mouseup', stopDrag);
-                document.addEventListener('touchend', stopDrag);
             };
 
-            const onDrag = (e) => {
-                if (!isTbDragging) return;
-                if (e.cancelable) e.preventDefault();
+            const onMove = (e) => {
+                if (!isTBDragging) return;
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-                const rect = toolbar.getBoundingClientRect();
-                
-                const minTop = 68;
-                const maxTop = window.innerHeight - rect.height - 10;
-                const minLeft = 10;
-                const maxLeft = window.innerWidth - rect.width - 10;
-
-                let calculatedTop = clientY - tbStartY;
-                let calculatedLeft = clientX - tbStartX;
-
-                tbPosY = Math.max(minTop, Math.min(calculatedTop, maxTop));
-                tbPosX = Math.max(minLeft, Math.min(calculatedLeft, maxLeft));
-
-                toolbar.style.top = `${tbPosY}px`;
-                toolbar.style.left = `${tbPosX}px`;
-                toolbar.style.transform = 'none';
+                toolbar.style.left = `${clientX - tbStartX + toolbar.offsetWidth / 2}px`;
+                toolbar.style.top = `${clientY - tbStartY}px`;
             };
 
-            const stopDrag = () => {
-                isTbDragging = false;
-                document.removeEventListener('mousemove', onDrag);
-                document.removeEventListener('touchmove', onDrag);
-                document.removeEventListener('mouseup', stopDrag);
-                document.removeEventListener('touchend', stopDrag);
-            };
+            const onEnd = () => { isTBDragging = false; };
 
-            dragHandle.onmousedown = startDrag;
-            dragHandle.ontouchstart = startDrag;
+            handle.addEventListener('mousedown', onStart);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
+
+            handle.addEventListener('touchstart', onStart, {passive: true});
+            window.addEventListener('touchmove', onMove, {passive: true});
+            window.addEventListener('touchend', onEnd);
         }
 
         window.onload = () => { setupPanZoom(); };
