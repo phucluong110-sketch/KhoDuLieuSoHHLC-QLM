@@ -81,20 +81,33 @@
             z-index: 900;
         }
         
-        /* THANH CÔNG CỤ TỐI ƯU MOBILE */
+        /* THANH CÔNG CỤ NẰM TRÊN CÙNG - CÓ GIỚI HẠN AN TOÀN */
         .wb-toolbar {
-            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-            background: #ffffff; border: 2px solid var(--wb-border); border-radius: 10px;
-            padding: 4px 6px; display: flex; gap: 4px; align-items: center; z-index: 2000;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2); user-select: none;
-            touch-action: none; max-width: 96vw; width: max-content; overflow-x: auto;
+            position: fixed; 
+            top: 70px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: #ffffff; 
+            border: 2px solid var(--wb-border); 
+            border-radius: 10px;
+            padding: 4px 6px; 
+            display: flex; 
+            gap: 4px; 
+            align-items: center; 
+            z-index: 2500; /* Nổi lên trên cùng */
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); 
+            user-select: none;
+            touch-action: none; 
+            max-width: 96vw; 
+            width: max-content; 
+            overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
         .wb-toolbar::-webkit-scrollbar { display: none; }
         .wb-toolbar.collapsed .wb-tool-group { display: none !important; }
         
         .wb-drag-handle {
-            cursor: move; padding: 4px 6px; font-weight: bold; color: #64748b; font-size: 14px;
+            cursor: move; padding: 4px 8px; font-weight: bold; color: #64748b; font-size: 14px;
             background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; display: flex; align-items: center; touch-action: none; flex-shrink: 0;
         }
         .wb-btn-toggle {
@@ -119,7 +132,6 @@
         }
         #canvas-viewport:active { cursor: grabbing; }
         
-        /* TỐI ƯU HÓA GPU VÀ HIỆU NĂNG CHO MÀN CHƠI CANVAS */
         #canvas-world { 
             position: absolute; top: 0; left: 0; 
             transform-origin: 0 0; 
@@ -150,7 +162,7 @@
         .toggle-badge { background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; font-weight: bold; font-size: 14px; flex-shrink: 0; }
         .node-media { width: 100%; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); margin-top: 4px; max-height: 130px; object-fit: cover; cursor: zoom-in; }
 
-        /* KHUNG GÓP Ý TƯƠNG TÁC */
+        /* KHUNG GÓP Ý */
         .node-feedback-box {
             margin-top: 8px; background: #ffffff; color: #1f2937; border-radius: 8px; padding: 8px; font-size: 11px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
@@ -162,7 +174,7 @@
         .feedback-input-group input { flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; outline: none; }
         .feedback-input-group button { background: #0284c7; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; }
 
-        /* NÚT ĐIỀU KHIỂN THU PHÓNG */
+        /* NÚT THU PHÓNG */
         .zoom-controls { 
             position: fixed; bottom: 20px; right: 12px; 
             background: #ffffff; border: 2px solid var(--wb-border); 
@@ -216,9 +228,9 @@
         </div>
     </div>
 
-    <!-- WHITEBOARD VIEW (CHẾ ĐỘ TỰ DO & CỔ ĐIỂN) -->
+    <!-- WHITEBOARD VIEW -->
     <div id="whiteboard-view">
-        <!-- THANH CÔNG CỤ TỐI ƯU -->
+        <!-- THANH CÔNG CỤ TOOLBAR -->
         <div class="wb-toolbar" id="wb-toolbar-el">
             <div class="wb-drag-handle" title="Nhấp giữ để kéo thanh công cụ">⠇</div>
             <button class="wb-btn-toggle" id="wb-toggle-btn" onclick="toggleToolbarCollapse()" title="Thu gọn thanh công cụ">◀</button>
@@ -236,7 +248,7 @@
                 <div id="canvas-tree-root" class="canvas-tree-root"></div>
             </div>
 
-            <!-- CỤM NÚT ĐIỀU KHIỂN THU PHÓNG MÀN HÌNH -->
+            <!-- CỤM NÚT ĐIỀU KHIỂN THU PHÓNG -->
             <div class="zoom-controls">
                 <button class="btn-zoom-action" onclick="zoomIn()">🔍 Phóng ra</button>
                 <button class="btn-zoom-action" onclick="zoomOut()">🔍 Thu lại</button>
@@ -274,7 +286,6 @@
     </div>
 
     <script>
-        // CẤU HÌNH FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBTEags0dUwod8q24kxTpj1l5ZC0f5Znk8",
             authDomain: "kho-du-lieu-so-xuong.firebaseapp.com",
@@ -351,7 +362,6 @@
             `).join('');
         }
 
-        /* WHITEBOARD DATA */
         const defaultWbData = {
             siteTitle: "SƠ ĐỒ VẬN HÀNH MÁY",
             tree: { id: 'root', text: 'SƠ ĐỒ QUY TRÌNH CHÍNH', expanded: true, children: [] }
@@ -613,7 +623,7 @@
 
         function closeMediaModal() { document.getElementById('media-viewer-modal').style.display = 'none'; }
 
-        /* TỐI ƯU HÓA KÉO CẢM ỨNG VỚI REQUESTANIMATIONFRAME - KHÔNG CÒN TRỄ / QUẸO */
+        /* TỐI ƯU HÓA KÉO THAO TÁC CẢM ỨNG SƠ ĐỒ */
         let initialPinchDistance = null;
         let initialScale = scale;
         let isUpdating = false;
@@ -695,12 +705,11 @@
             return Math.sqrt(dx * dx + dy * dy);
         }
 
-        /* NÚT THU PHÓNG */
         function zoomIn() { scale = Math.min(scale + 0.2, 2.5); updateTransform(); }
         function zoomOut() { scale = Math.max(scale - 0.2, 0.3); updateTransform(); }
         function resetZoom() { scale = 0.85; panX = 40; panY = 40; updateTransform(); }
 
-        /* KÉO THẢ THANH CÔNG CỤ TOOLBAR */
+        /* KÉO THẢ TOOLBAR VỚI GIỚI HẠN AN TOÀN KHOẢNG CÁCH (KHÔNG BỊ MẤT TÍCH) */
         let tbPosX = 0, tbPosY = 0;
         let isTbDragging = false;
         let tbStartX = 0, tbStartY = 0;
@@ -709,6 +718,11 @@
             const toolbar = document.getElementById('wb-toolbar-el');
             if (!toolbar) return;
             const dragHandle = toolbar.querySelector('.wb-drag-handle');
+
+            // Reset vị trí về sát trên cùng mặc định
+            toolbar.style.top = '70px';
+            toolbar.style.left = '50%';
+            toolbar.style.transform = 'translateX(-50%)';
 
             const startDrag = (e) => {
                 isTbDragging = true;
@@ -731,11 +745,23 @@
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-                tbPosX = clientX - tbStartX;
-                tbPosY = clientY - tbStartY;
+                const rect = toolbar.getBoundingClientRect();
+                
+                // GIỚI HẠN TỌA ĐỘ AN TOÀN
+                const minTop = 68; // Không bao giờ cho phép vượt lên trên Header (65px)
+                const maxTop = window.innerHeight - rect.height - 10;
+                const minLeft = 10;
+                const maxLeft = window.innerWidth - rect.width - 10;
 
-                toolbar.style.left = `${tbPosX}px`;
+                let calculatedTop = clientY - tbStartY;
+                let calculatedLeft = clientX - tbStartX;
+
+                // Áp dụng giới hạn khóa không cho trôi ra khỏi màn hình
+                tbPosY = Math.max(minTop, Math.min(calculatedTop, maxTop));
+                tbPosX = Math.max(minLeft, Math.min(calculatedLeft, maxLeft));
+
                 toolbar.style.top = `${tbPosY}px`;
+                toolbar.style.left = `${tbPosX}px`;
                 toolbar.style.transform = 'none';
             };
 
