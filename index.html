@@ -28,7 +28,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
         body { background-color: var(--bg); color: var(--text-main); overflow-x: hidden; padding-top: 65px; }
 
-        /* HEADER C C C C */
         header {
             background-color: var(--primary);
             color: var(--secondary);
@@ -48,7 +47,6 @@
 
         .container { max-width: 1100px; margin: 15px auto; padding: 0 16px; }
 
-        /* GIAO DIỆN TRANG CHỦ */
         .status-banner {
             background-color: var(--primary); color: var(--secondary); border-radius: 12px; padding: 20px; margin-bottom: 20px;
             display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.12);
@@ -69,7 +67,6 @@
         .btn-action { background: var(--primary); color: var(--secondary); border: none; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: center; width: 100%; transition: 0.2s; margin-top: auto; }
         .btn-action:hover { opacity: 0.9; }
 
-        /* WHITEBOARD VIEW */
         #whiteboard-view { 
             display: none; 
             width: 100vw; 
@@ -172,14 +169,13 @@
             cursor: zoom-in; 
         }
 
-        /* BẢNG DỮ LIỆU CÓ THỦ THUẬT NÚT PHÓNG TO */
         .node-table-wrapper { width: 100%; overflow-x: auto; margin-top: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); background: #ffffff; }
         .node-table-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-size: 10px; font-weight: bold; color: #334155; }
         .node-table { width: 100%; border-collapse: collapse; font-size: 11px; background: #ffffff; color: #1f2937; }
         .node-table th, .node-table td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; word-break: break-word; }
         .node-table th { background: #f1f5f9; font-weight: bold; color: #0f172a; }
 
-        /* KHUNG GÓP Ý */
+        /* KHUNG GÓP Ý DÀNH CHO NHÂN VIÊN */
         .node-feedback-box {
             margin-top: 8px; background: #ffffff; color: #1f2937; border-radius: 8px; padding: 8px; font-size: 11px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
@@ -191,7 +187,6 @@
         .feedback-input-group input { flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; outline: none; }
         .feedback-input-group button { background: #0284c7; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; }
 
-        /* NÚT THU PHÓNG */
         .zoom-controls { 
             position: fixed; bottom: 20px; right: 12px; 
             background: #ffffff; border: 2px solid var(--wb-border); 
@@ -409,7 +404,6 @@
             document.getElementById('classic-banner-title').innerText = wbState.siteTitle;
             setTimeout(() => {
                 renderWb();
-                initDraggableToolbar();
             }, 100);
         }
 
@@ -467,7 +461,6 @@
             document.getElementById('classic-viewport').scrollTo(0,0);
         }
 
-        /* HÀM RENDER BẢNG DỮ LIỆU CÓ NÚT PHÓNG TO */
         function renderNodeTableHTML(tableData, nodeId) {
             if (!tableData || !tableData.headers || tableData.headers.length === 0) return '';
             let html = `<div class="node-table-wrapper">
@@ -491,7 +484,6 @@
             return html;
         }
 
-        /* TÍNH NĂNG PHÓNG TO BẢNG DỮ LIỆU SANG MODAL TOÁN MÀN HÌNH */
         function openTableZoomModal(nodeId) {
             let n = findWbNode(wbState.tree, nodeId);
             if (!n || !n.tableData) return;
@@ -516,6 +508,118 @@
             
             contentEl.innerHTML = html;
             document.getElementById('media-viewer-modal').style.display = 'flex';
+        }
+
+        function sendUserFeedback(nodeId) {
+            let inputEl = document.getElementById(`fb-input-${nodeId}`);
+            if (!inputEl) return;
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            let node = findWbNode(wbState.tree, nodeId);
+            if (node) {
+                if (!node.feedbacks) node.feedbacks = [];
+                let now = new Date();
+                let timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} - ${now.getDate()}/${now.getMonth()+1}`;
+                node.feedbacks.push({ id: Date.now(), text: text, time: timeStr });
+                
+                db.ref('wb_data/' + currentWbMachineId).set(wbState).then(() => {
+                    inputEl.value = '';
+                    renderWb();
+                });
+            }
+        }
+
+        function renderUserFeedbackWidget(node) {
+            if (!node.enableFeedback) return '';
+            const list = node.feedbacks || [];
+            return `
+                <div class="node-feedback-box" onclick="event.stopPropagation()">
+                    <div class="feedback-title">
+                        <span>💬 Ý KIẾN GÓP Ý (${list.length})</span>
+                    </div>
+                    ${list.length > 0 ? `
+                        <div class="feedback-list">
+                            ${list.map(f => `
+                                <div class="feedback-item">
+                                    <div>${f.text}</div>
+                                    <div class="feedback-time">⏱️ ${f.time}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `<div style="font-size:10px; color:#94a3b8; font-style:italic; margin-bottom:4px;">Chưa có phản hồi nào. Hãy để lại ý kiến của bạn!</div>`}
+                    <div class="feedback-input-group">
+                        <input type="text" id="fb-input-${node.id}" placeholder="Viết phản hồi/góp ý...">
+                        <button type="button" onclick="sendUserFeedback('${node.id}')">Gửi</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function buildCanvasHTML(node, depth = 0) {
+            if (node.hidden) return '';
+            let visibleChildren = (node.children || []).filter(c => !c.hidden);
+            let hasChild = visibleChildren.length > 0;
+            let lvl = `lvl-${Math.min(depth, 3)}`;
+            let customStyle = node.bgColor ? `background-color: ${node.bgColor} !important; border-color: ${node.bgColor} !important;` : '';
+
+            let docBadge = '';
+            if (node.docFile && node.docFile.url) {
+                docBadge = `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'doc')">💾 ${node.docFile.name || 'Xem Tài Liệu Đính Kèm'}</span>`;
+            } else if (node.pdfUrl) {
+                docBadge = `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 Xem File PDF</span>`;
+            }
+
+            return `
+                <div class="c-branch" id="branch-${node.id}">
+                    <div class="c-node-card ${lvl}" id="card-${node.id}" style="${customStyle}">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <div class="editable-text">${node.text}</div>
+                            ${hasChild ? `<div class="toggle-badge" onclick="toggleExpand('${node.id}')">${node.expanded ? '−' : '+'}</div>` : ''}
+                        </div>
+                        ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)" onload="drawConnections()">` : ''}
+                        ${renderNodeTableHTML(node.tableData, node.id)}
+                        <div class="node-media-badges">
+                            ${node.videoUrl ? `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'video')">📹 Video</span>` : ''}
+                            ${docBadge}
+                        </div>
+                        ${renderUserFeedbackWidget(node)}
+                    </div>
+                    ${hasChild ? `<div class="c-children ${node.expanded ? '' : 'collapsed'}">${visibleChildren.map(c => buildCanvasHTML(c, depth+1)).join('')}</div>` : ''}
+                </div>`;
+        }
+
+        function buildClassicCardHTML(node, isChildLink = true, depth = 1) {
+            if (node.hidden) return '';
+            let visibleChildren = (node.children || []).filter(c => !c.hidden);
+            let hasChild = visibleChildren.length > 0;
+            let lvl = `lvl-${Math.min(depth, 3)}`;
+            let customStyle = node.bgColor ? `background-color: ${node.bgColor} !important; border-color: ${node.bgColor} !important;` : '';
+
+            let clickAction = (isChildLink && hasChild) ? `onclick="enterClassicNode('${node.id}')" style="cursor:pointer;"` : ``;
+            let toggleIcon = (isChildLink && hasChild) ? `<div style="font-size:11px; background:rgba(255,255,255,0.25); padding:4px 8px; border-radius:4px; font-weight:600; white-space:nowrap;">Xem chi tiết (${visibleChildren.length}) ►</div>` : '';
+
+            let docBadge = '';
+            if (node.docFile && node.docFile.url) {
+                docBadge = `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'doc')">💾 Xem Tệp: ${node.docFile.name || 'Tài liệu'}</span>`;
+            } else if (node.pdfUrl) {
+                docBadge = `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 Đọc File PDF</span>`;
+            }
+
+            return `
+                <div style="display:flex; flex-direction:column; gap:8px; background:var(--card-bg); padding:12px; border-radius:10px; border:1px solid var(--card-border); box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                    <div class="classic-card-header ${lvl}" style="${customStyle}" ${clickAction}>
+                        <div class="editable-text">${node.text}</div>
+                        ${toggleIcon}
+                    </div>
+                    ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)">` : ''}
+                    ${renderNodeTableHTML(node.tableData, node.id)}
+                    <div class="node-media-badges">
+                        ${node.videoUrl ? `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'video')">📹 Xem Video Hướng Dẫn</span>` : ''}
+                        ${docBadge}
+                    </div>
+                    ${renderUserFeedbackWidget(node)}
+                </div>`;
         }
 
         function renderWb() {
@@ -554,128 +658,13 @@
             }
         }
 
-        function sendUserFeedback(nodeId, targetEl) {
-            let inputEl = targetEl;
-            if (targetEl && targetEl.tagName === 'BUTTON') inputEl = targetEl.previousElementSibling;
-            if (!inputEl) inputEl = document.getElementById(`fb-input-${nodeId}`);
-            if (!inputEl) return;
-
-            const text = inputEl.value.trim();
-            if (!text) { alert('Vui lòng nhập nội dung góp ý!'); return; }
-
-            let node = findWbNode(wbState.tree, nodeId);
-            if (node) {
-                if (!node.feedbacks) node.feedbacks = [];
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' ' + now.toLocaleDateString('vi-VN');
-                
-                node.feedbacks.push({ id: Date.now(), text: text, time: timeStr });
-                db.ref('wb_data/' + currentWbMachineId).set(wbState);
-            }
-        }
-
-        function renderFeedbackWidget(node) {
-            if (!node.enableFeedback) return '';
-            const list = node.feedbacks || [];
-            return `
-                <div class="node-feedback-box" onclick="event.stopPropagation()">
-                    <div class="feedback-title">
-                        <span>💬 Ý KIẾN GÓP Ý (${list.length})</span>
-                    </div>
-                    ${list.length > 0 ? `
-                        <div class="feedback-list">
-                            ${list.map(f => `
-                                <div class="feedback-item">
-                                    <div>${f.text}</div>
-                                    <div class="feedback-time">⏱️ ${f.time}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : `<div style="font-size:10px; color:#94a3b8; margin-bottom:4px; font-style:italic;">Chưa có ý kiến nào.</div>`}
-                    <div class="feedback-input-group">
-                        <input type="text" placeholder="Gửi góp ý..." onkeydown="if(event.key==='Enter') sendUserFeedback('${node.id}', this)">
-                        <button onclick="sendUserFeedback('${node.id}', this)">Gửi</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function buildCanvasHTML(node, depth = 0) {
-            if (node.hidden) return ''; // LỌC BỎ NHÁNH BỊ ẨN ĐỐI VỚI NHÂN VIÊN
-            
-            let visibleChildren = (node.children || []).filter(c => !c.hidden);
-            let hasChild = visibleChildren.length > 0;
-            let lvl = `lvl-${Math.min(depth, 3)}`;
-            let customStyle = node.bgColor ? `background-color: ${node.bgColor} !important; border-color: ${node.bgColor} !important;` : '';
-
-            let docBadge = '';
-            if (node.docFile && node.docFile.url) {
-                docBadge = `<a class="media-badge" href="${node.docFile.url}" download="${node.docFile.name || 'Tai-lieu'}">💾 ${node.docFile.name || 'Tải Tệp Đính Kèm'}</a>`;
-            } else if (node.pdfUrl) {
-                docBadge = `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 PDF</span>`;
-            }
-
-            return `
-                <div class="c-branch" id="branch-${node.id}">
-                    <div class="c-node-card ${lvl}" id="card-${node.id}" style="${customStyle}">
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                            <div class="editable-text">${node.text}</div>
-                            ${hasChild ? `<div class="toggle-badge" onclick="toggleExpand('${node.id}')">${node.expanded ? '−' : '+'}</div>` : ''}
-                        </div>
-                        ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)" onload="drawConnections()">` : ''}
-                        ${renderNodeTableHTML(node.tableData, node.id)}
-                        <div class="node-media-badges">
-                            ${node.videoUrl ? `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'video')">📹 Video</span>` : ''}
-                            ${docBadge}
-                        </div>
-                        ${renderFeedbackWidget(node)}
-                    </div>
-                    ${hasChild ? `<div class="c-children ${node.expanded ? '' : 'collapsed'}">${visibleChildren.map(c => buildCanvasHTML(c, depth+1)).join('')}</div>` : ''}
-                </div>`;
-        }
-
-        function buildClassicCardHTML(node, isChildLink = true, depth = 1) {
-            if (node.hidden) return ''; // LỌC BỎ NHÁNH BỊ ẨN
-            
-            let visibleChildren = (node.children || []).filter(c => !c.hidden);
-            let hasChild = visibleChildren.length > 0;
-            let lvl = `lvl-${Math.min(depth, 3)}`;
-            let customStyle = node.bgColor ? `background-color: ${node.bgColor} !important; border-color: ${node.bgColor} !important;` : '';
-            
-            let clickAction = (isChildLink && hasChild) ? `onclick="enterClassicNode('${node.id}')" style="cursor:pointer;"` : ``;
-            let toggleIcon = (isChildLink && hasChild) ? `<div style="font-size:11px; background:rgba(255,255,255,0.25); padding:4px 8px; border-radius:4px; font-weight:600; white-space:nowrap;">Xem chi tiết (${visibleChildren.length}) ►</div>` : '';
-
-            let docBadge = '';
-            if (node.docFile && node.docFile.url) {
-                docBadge = `<a class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" href="${node.docFile.url}" download="${node.docFile.name || 'Tai-lieu'}">💾 Tải Tệp: ${node.docFile.name || 'Tài liệu'}</a>`;
-            } else if (node.pdfUrl) {
-                docBadge = `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'pdf')">📄 Đọc File PDF</span>`;
-            }
-
-            return `
-                <div style="display:flex; flex-direction:column; gap:8px; background:var(--card-bg); padding:12px; border-radius:10px; border:1px solid var(--card-border); box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-                    <div class="classic-card-header ${lvl}" style="${customStyle}" ${clickAction}>
-                        <div class="editable-text">${node.text}</div>
-                        ${toggleIcon}
-                    </div>
-                    ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)">` : ''}
-                    ${renderNodeTableHTML(node.tableData, node.id)}
-                    <div class="node-media-badges">
-                        ${node.videoUrl ? `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'video')">📹 Xem Video Hướng Dẫn</span>` : ''}
-                        ${docBadge}
-                    </div>
-                    ${renderFeedbackWidget(node)}
-                </div>`;
-        }
-
         function drawConnections() {
             const svg = document.getElementById('svg-canvas'); if(!svg) return; svg.innerHTML = '';
             function connectRec(node) {
-                if(!node.expanded || !node.children) return;
+                if(node.hidden || !node.expanded || !node.children) return;
                 const pCard = document.getElementById(`card-${node.id}`); if(!pCard) return;
-                
-                let visibleChildren = node.children.filter(c => !c.hidden);
-                visibleChildren.forEach(c => {
+                node.children.forEach(c => {
+                    if (c.hidden) return;
                     const cCard = document.getElementById(`card-${c.id}`);
                     if(cCard) {
                         const s = getAnchor(pCard, 'right'), e = getAnchor(cCard, 'left'), dX = Math.abs(e.x - s.x)*0.45;
@@ -702,15 +691,16 @@
             const titleEl = document.getElementById('media-modal-title');
             const contentEl = document.getElementById('media-modal-content');
 
-            if (type === 'video' && n.videoUrl) {
-                titleEl.innerText = '📹 Video Hướng Dẫn: ' + n.text;
-                let rawUrl = n.videoUrl.trim();
-                let embedUrl = rawUrl;
+            if (type === 'video') {
+                let rawUrl = (n.videoUrl || '').trim();
+                if (!rawUrl) { alert("Không tìm thấy đường dẫn video!"); return; }
+                titleEl.innerText = '📹 Video Hướng Dẫn: ' + (n.text || '');
 
                 if (rawUrl.includes("youtube.com") || rawUrl.includes("youtu.be")) {
-                    embedUrl = rawUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").split('&')[0];
+                    let match = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+                    let embedUrl = match ? `https://www.youtube.com/embed/${match[1]}` : rawUrl;
                     contentEl.innerHTML = `
-                        <iframe src="${embedUrl}" style="width:100%; height:320px; border-radius:8px; border:none;" allowfullscreen></iframe>
+                        <iframe src="${embedUrl}" style="width:100%; height:360px; border-radius:8px; border:none;" allowfullscreen></iframe>
                         <div style="margin-top:12px; text-align:center;">
                             <a href="${rawUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">
                                 ↗ Mở Video Ở Trang Mới
@@ -728,16 +718,35 @@
             } 
             else if (type === 'pdf' || type === 'doc') {
                 let fileUrl = n.pdfUrl || (n.docFile ? n.docFile.url : '');
+                let fileName = (n.docFile ? n.docFile.name : '') || 'Tài liệu';
                 if (!fileUrl) { alert("Không tìm thấy đường dẫn tệp tin!"); return; }
                 
-                titleEl.innerText = '📄 Tài Liệu Đính Kèm: ' + n.text;
-                let gviewUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+                titleEl.innerText = '📄 Tài Liệu Đính Kèm: ' + (n.text || '');
+
+                let previewHTML = '';
+                if (fileUrl.startsWith('data:') || fileUrl.startsWith('blob:')) {
+                    if (fileUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
+                        previewHTML = `<iframe src="${fileUrl}" style="width:100%; height:450px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>`;
+                    } else {
+                        previewHTML = `<div style="padding:30px; text-align:center; background:#f8fafc; border-radius:8px; border:1px solid #cbd5e1;">
+                            <p style="font-size:14px; font-weight:bold; color:#334155; margin-bottom:10px;">📎 Tệp: ${fileName}</p>
+                            <p style="font-size:12px; color:#64748b;">Trình duyệt không thể xem trước loại tệp này. Vui lòng bấm tải về bên dưới.</p>
+                        </div>`;
+                    }
+                } else {
+                    if (fileUrl.toLowerCase().endsWith('.pdf') || fileUrl.includes('pdf')) {
+                        previewHTML = `<iframe src="${fileUrl}" style="width:100%; height:450px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>`;
+                    } else {
+                        let gviewUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+                        previewHTML = `<iframe src="${gviewUrl}" style="width:100%; height:450px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>`;
+                    }
+                }
                 
                 contentEl.innerHTML = `
-                    <iframe src="${gviewUrl}" style="width:100%; height:420px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>
+                    ${previewHTML}
                     <div style="margin-top:12px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
-                        <a href="${fileUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">↗ Mở Ở Trang Mới</a>
-                        <a href="${fileUrl}" download style="background:#16a34a; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">💾 Tải Tệp Về Máy</a>
+                        ${!fileUrl.startsWith('data:') ? `<a href="${fileUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">↗ Mở Ở Trang Mới</a>` : ''}
+                        <a href="${fileUrl}" download="${fileName}" style="background:#16a34a; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">💾 Tải Tệp Về Máy</a>
                     </div>`;
             }
             document.getElementById('media-viewer-modal').style.display = 'flex';
@@ -745,35 +754,20 @@
 
         function closeMediaModal() { document.getElementById('media-viewer-modal').style.display = 'none'; }
 
-        /* KÉO THAO TÁC CẢM ỨNG SƠ ĐỒ */
-        let initialPinchDistance = null;
-        let initialScale = scale;
-        let isUpdating = false;
-
         function updateTransform() { 
-            if (!isUpdating) {
-                requestAnimationFrame(() => {
-                    canvasWorld.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${scale})`; 
-                    drawConnections(); 
-                    isUpdating = false;
-                });
-                isUpdating = true;
-            }
+            canvasWorld.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${scale})`; 
+            drawConnections(); 
         }
 
         function setupPanZoom() {
             canvasViewport.addEventListener('mousedown', e => { 
                 if(e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls')) return; 
-                isDragging=true; 
-                startX=e.clientX-panX; 
-                startY=e.clientY-panY; 
+                isDragging=true; startX=e.clientX-panX; startY=e.clientY-panY; 
             });
             
             window.addEventListener('mousemove', e => { 
                 if(!isDragging) return; 
-                panX=e.clientX-startX; 
-                panY=e.clientY-startY; 
-                updateTransform(); 
+                panX=e.clientX-startX; panY=e.clientY-startY; updateTransform(); 
             });
 
             window.addEventListener('mouseup', () => isDragging=false);
@@ -783,82 +777,11 @@
                 scale = e.deltaY < 0 ? Math.min(scale + 0.08, 2.5) : Math.max(scale - 0.08, 0.3); 
                 updateTransform(); 
             }, {passive: false});
-
-            canvasViewport.addEventListener('touchstart', e => {
-                if (e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls')) return;
-                if (e.touches.length === 1) {
-                    isDragging = true;
-                    startX = e.touches[0].clientX - panX;
-                    startY = e.touches[0].clientY - panY;
-                } else if (e.touches.length === 2) {
-                    isDragging = false;
-                    initialPinchDistance = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    initialScale = scale;
-                }
-            }, {passive: true});
-
-            canvasViewport.addEventListener('touchmove', e => {
-                if (isDragging && e.touches.length === 1) {
-                    panX = e.touches[0].clientX - startX;
-                    panY = e.touches[0].clientY - startY;
-                    updateTransform();
-                } else if (e.touches.length === 2 && initialPinchDistance) {
-                    const currentDist = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    scale = Math.min(Math.max(initialScale * (currentDist / initialPinchDistance), 0.3), 2.5);
-                    updateTransform();
-                }
-            }, {passive: true});
-
-            canvasViewport.addEventListener('touchend', () => {
-                isDragging = false;
-                initialPinchDistance = null;
-            });
         }
 
         function zoomIn() { scale = Math.min(scale+0.2, 2.5); updateTransform(); }
         function zoomOut() { scale = Math.max(scale-0.2, 0.3); updateTransform(); }
         function resetZoom() { scale = 0.85; panX = 40; panY = 40; updateTransform(); }
-
-        function initDraggableToolbar() {
-            const toolbar = document.getElementById('wb-toolbar-el');
-            const handle = toolbar ? toolbar.querySelector('.wb-drag-handle') : null;
-            if (!handle) return;
-
-            let isTBDragging = false, tbStartX = 0, tbStartY = 0;
-
-            const onStart = (e) => {
-                isTBDragging = true;
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const rect = toolbar.getBoundingClientRect();
-                tbStartX = clientX - rect.left;
-                tbStartY = clientY - rect.top;
-            };
-
-            const onMove = (e) => {
-                if (!isTBDragging) return;
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                toolbar.style.left = `${clientX - tbStartX + toolbar.offsetWidth / 2}px`;
-                toolbar.style.top = `${clientY - tbStartY}px`;
-            };
-
-            const onEnd = () => { isTBDragging = false; };
-
-            handle.addEventListener('mousedown', onStart);
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('mouseup', onEnd);
-
-            handle.addEventListener('touchstart', onStart, {passive: true});
-            window.addEventListener('touchmove', onMove, {passive: true});
-            window.addEventListener('touchend', onEnd);
-        }
 
         window.onload = () => { setupPanZoom(); };
     </script>
