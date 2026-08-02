@@ -28,7 +28,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
         body { background-color: var(--bg); color: var(--text-main); overflow-x: hidden; padding-top: 65px; }
 
-        /* HEADER CỐ ĐỊNH */
+        /* HEADER C C C C */
         header {
             background-color: var(--primary);
             color: var(--secondary);
@@ -81,7 +81,6 @@
             z-index: 900;
         }
         
-        /* THANH CÔNG CỤ NẰM TRÊN CÙNG */
         .wb-toolbar {
             position: fixed; 
             top: 70px; 
@@ -173,8 +172,9 @@
             cursor: zoom-in; 
         }
 
-        /* BẢNG DỮ LIỆU TRONG NHÁNH (ĐÃ ĐỒNG BỘ CSS) */
-        .node-table-wrapper { width: 100%; overflow-x: auto; margin-top: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); }
+        /* BẢNG DỮ LIỆU CÓ THỦ THUẬT NÚT PHÓNG TO */
+        .node-table-wrapper { width: 100%; overflow-x: auto; margin-top: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); background: #ffffff; }
+        .node-table-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-size: 10px; font-weight: bold; color: #334155; }
         .node-table { width: 100%; border-collapse: collapse; font-size: 11px; background: #ffffff; color: #1f2937; }
         .node-table th, .node-table td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; word-break: break-word; }
         .node-table th { background: #f1f5f9; font-weight: bold; color: #0f172a; }
@@ -221,7 +221,6 @@
 </head>
 <body>
 
-    <!-- HEADER CỐ ĐỊNH -->
     <header>
         <div class="brand">
             <div class="brand-logo-container" id="header-logo-wrapper"></div>
@@ -247,7 +246,6 @@
 
     <!-- WHITEBOARD VIEW -->
     <div id="whiteboard-view">
-        <!-- THANH CÔNG CỤ TOOLBAR -->
         <div class="wb-toolbar" id="wb-toolbar-el">
             <div class="wb-drag-handle" title="Nhấp giữ để kéo thanh công cụ">⠇</div>
             <button class="wb-btn-toggle" id="wb-toggle-btn" onclick="toggleToolbarCollapse()" title="Thu gọn thanh công cụ">◀</button>
@@ -258,14 +256,12 @@
             </div>
         </div>
 
-        <!-- CANVAS TỰ DO -->
         <div id="canvas-viewport">
             <div id="canvas-world">
                 <svg id="svg-canvas"></svg>
                 <div id="canvas-tree-root" class="canvas-tree-root"></div>
             </div>
 
-            <!-- CỤM NÚT ĐIỀU KHIỂN THU PHÓNG -->
             <div class="zoom-controls">
                 <button class="btn-zoom-action" onclick="zoomIn()">🔍 Phóng ra</button>
                 <button class="btn-zoom-action" onclick="zoomOut()">🔍 Thu lại</button>
@@ -273,7 +269,6 @@
             </div>
         </div>
 
-        <!-- VIEW CỔ ĐIỂN -->
         <div id="classic-viewport">
             <div class="classic-container">
                 <div class="classic-top-banner">
@@ -288,7 +283,7 @@
         </div>
     </div>
 
-    <!-- MODAL MEDIA -->
+    <!-- MODAL MEDIA & ZOOM BẢNG DỮ LIỆU -->
     <div id="media-viewer-modal" class="modal-overlay">
         <div class="modal-card">
             <button class="modal-close" onclick="closeMediaModal()">✕</button>
@@ -472,10 +467,15 @@
             document.getElementById('classic-viewport').scrollTo(0,0);
         }
 
-        /* HÀM RENDER BẢNG DỮ LIỆU Bổ SUNG */
-        function renderNodeTableHTML(tableData) {
+        /* HÀM RENDER BẢNG DỮ LIỆU CÓ NÚT PHÓNG TO */
+        function renderNodeTableHTML(tableData, nodeId) {
             if (!tableData || !tableData.headers || tableData.headers.length === 0) return '';
-            let html = '<div class="node-table-wrapper"><table class="node-table"><thead><tr>';
+            let html = `<div class="node-table-wrapper">
+                <div class="node-table-header">
+                    <span>📊 BẢNG DỮ LIỆU</span>
+                    <button type="button" class="media-badge" style="background:#0284c7; color:#fff; border:none; padding:3px 8px;" onclick="openTableZoomModal('${nodeId}')">🔍 Phóng to bảng</button>
+                </div>
+                <table class="node-table"><thead><tr>`;
             tableData.headers.forEach(h => {
                 html += `<th>${h || ''}</th>`;
             });
@@ -489,6 +489,33 @@
             });
             html += '</tbody></table></div>';
             return html;
+        }
+
+        /* TÍNH NĂNG PHÓNG TO BẢNG DỮ LIỆU SANG MODAL TOÁN MÀN HÌNH */
+        function openTableZoomModal(nodeId) {
+            let n = findWbNode(wbState.tree, nodeId);
+            if (!n || !n.tableData) return;
+            const titleEl = document.getElementById('media-modal-title');
+            const contentEl = document.getElementById('media-modal-content');
+            titleEl.innerText = '🔍 BẢNG DỮ LIỆU CHI TIẾT: ' + (n.text || '');
+            
+            let html = '<div style="max-height:72vh; overflow:auto; padding:10px; background:#fff; border-radius:8px; border:1px solid #cbd5e1;">';
+            html += '<table class="node-table" style="font-size:14px; width:100%; min-width:500px; border-collapse:collapse;"><thead><tr>';
+            (n.tableData.headers || []).forEach(h => {
+                html += `<th style="padding:10px; background:#f1f5f9; font-weight:bold; border:1px solid #cbd5e1; color:#0f172a; position:sticky; top:0; z-index:2;">${h || ''}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            (n.tableData.rows || []).forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td style="padding:10px 12px; border:1px solid #cbd5e1; font-size:13px; line-height:1.5;">${cell || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            
+            contentEl.innerHTML = html;
+            document.getElementById('media-viewer-modal').style.display = 'flex';
         }
 
         function renderWb() {
@@ -513,12 +540,14 @@
                 let contentHTML = '';
                 if (currentClassicNodeId !== 'root') {
                     contentHTML += `<div style="grid-column: 1 / -1;">${buildClassicCardHTML(activeNode, false, 0)}</div>`;
-                    if (activeNode.children && activeNode.children.length > 0) {
-                        contentHTML += `<div style="grid-column: 1 / -1; margin: 8px 0; border-bottom: 2px dashed #cbd5e1; text-align: center;"><span style="background:var(--bg-canvas); padding: 0 10px; color:var(--text-muted); font-size: 13px; position:relative; top:10px;">Thư mục con (${activeNode.children.length})</span></div>`;
-                        contentHTML += activeNode.children.map(c => buildClassicCardHTML(c, true, 1)).join('');
+                    let visibleChildren = (activeNode.children || []).filter(c => !c.hidden);
+                    if (visibleChildren.length > 0) {
+                        contentHTML += `<div style="grid-column: 1 / -1; margin: 8px 0; border-bottom: 2px dashed #cbd5e1; text-align: center;"><span style="background:var(--bg-canvas); padding: 0 10px; color:var(--text-muted); font-size: 13px; position:relative; top:10px;">Thư mục con (${visibleChildren.length})</span></div>`;
+                        contentHTML += visibleChildren.map(c => buildClassicCardHTML(c, true, 1)).join('');
                     }
                 } else {
-                    contentHTML += (activeNode.children || []).map(c => buildClassicCardHTML(c, true, 1)).join('');
+                    let visibleChildren = (activeNode.children || []).filter(c => !c.hidden);
+                    contentHTML += visibleChildren.map(c => buildClassicCardHTML(c, true, 1)).join('');
                 }
                 
                 document.getElementById('classic-grid-content').innerHTML = contentHTML;
@@ -572,7 +601,10 @@
         }
 
         function buildCanvasHTML(node, depth = 0) {
-            let hasChild = node.children && node.children.length > 0;
+            if (node.hidden) return ''; // LỌC BỎ NHÁNH BỊ ẨN ĐỐI VỚI NHÂN VIÊN
+            
+            let visibleChildren = (node.children || []).filter(c => !c.hidden);
+            let hasChild = visibleChildren.length > 0;
             let lvl = `lvl-${Math.min(depth, 3)}`;
             let customStyle = node.bgColor ? `background-color: ${node.bgColor} !important; border-color: ${node.bgColor} !important;` : '';
 
@@ -591,24 +623,27 @@
                             ${hasChild ? `<div class="toggle-badge" onclick="toggleExpand('${node.id}')">${node.expanded ? '−' : '+'}</div>` : ''}
                         </div>
                         ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)" onload="drawConnections()">` : ''}
-                        ${renderNodeTableHTML(node.tableData)}
+                        ${renderNodeTableHTML(node.tableData, node.id)}
                         <div class="node-media-badges">
                             ${node.videoUrl ? `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'video')">📹 Video</span>` : ''}
                             ${docBadge}
                         </div>
                         ${renderFeedbackWidget(node)}
                     </div>
-                    ${hasChild ? `<div class="c-children ${node.expanded ? '' : 'collapsed'}">${node.children.map(c => buildCanvasHTML(c, depth+1)).join('')}</div>` : ''}
+                    ${hasChild ? `<div class="c-children ${node.expanded ? '' : 'collapsed'}">${visibleChildren.map(c => buildCanvasHTML(c, depth+1)).join('')}</div>` : ''}
                 </div>`;
         }
 
         function buildClassicCardHTML(node, isChildLink = true, depth = 1) {
-            let hasChild = node.children && node.children.length > 0;
+            if (node.hidden) return ''; // LỌC BỎ NHÁNH BỊ ẨN
+            
+            let visibleChildren = (node.children || []).filter(c => !c.hidden);
+            let hasChild = visibleChildren.length > 0;
             let lvl = `lvl-${Math.min(depth, 3)}`;
             let customStyle = node.bgColor ? `background-color: ${node.bgColor} !important; border-color: ${node.bgColor} !important;` : '';
             
             let clickAction = (isChildLink && hasChild) ? `onclick="enterClassicNode('${node.id}')" style="cursor:pointer;"` : ``;
-            let toggleIcon = (isChildLink && hasChild) ? `<div style="font-size:11px; background:rgba(255,255,255,0.25); padding:4px 8px; border-radius:4px; font-weight:600; white-space:nowrap;">Xem chi tiết (${node.children.length}) ►</div>` : '';
+            let toggleIcon = (isChildLink && hasChild) ? `<div style="font-size:11px; background:rgba(255,255,255,0.25); padding:4px 8px; border-radius:4px; font-weight:600; white-space:nowrap;">Xem chi tiết (${visibleChildren.length}) ►</div>` : '';
 
             let docBadge = '';
             if (node.docFile && node.docFile.url) {
@@ -624,7 +659,7 @@
                         ${toggleIcon}
                     </div>
                     ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)">` : ''}
-                    ${renderNodeTableHTML(node.tableData)}
+                    ${renderNodeTableHTML(node.tableData, node.id)}
                     <div class="node-media-badges">
                         ${node.videoUrl ? `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'video')">📹 Xem Video Hướng Dẫn</span>` : ''}
                         ${docBadge}
@@ -638,7 +673,9 @@
             function connectRec(node) {
                 if(!node.expanded || !node.children) return;
                 const pCard = document.getElementById(`card-${node.id}`); if(!pCard) return;
-                node.children.forEach(c => {
+                
+                let visibleChildren = node.children.filter(c => !c.hidden);
+                visibleChildren.forEach(c => {
                     const cCard = document.getElementById(`card-${c.id}`);
                     if(cCard) {
                         const s = getAnchor(pCard, 'right'), e = getAnchor(cCard, 'left'), dX = Math.abs(e.x - s.x)*0.45;
@@ -659,70 +696,56 @@
         }
 
         function viewNodeMedia(nodeId, type) {
-    let n = findWbNode(wbState.tree, nodeId); 
-    if(!n) return;
-    
-    const titleEl = document.getElementById('media-modal-title');
-    const contentEl = document.getElementById('media-modal-content');
+            let n = findWbNode(wbState.tree, nodeId); 
+            if(!n) return;
+            
+            const titleEl = document.getElementById('media-modal-title');
+            const contentEl = document.getElementById('media-modal-content');
 
-    // XỬ LÝ XEM VIDEO
-    if (type === 'video' && n.videoUrl) {
-        titleEl.innerText = '📹 Video Hướng Dẫn: ' + n.text;
-        let rawUrl = n.videoUrl.trim();
-        let embedUrl = rawUrl;
+            if (type === 'video' && n.videoUrl) {
+                titleEl.innerText = '📹 Video Hướng Dẫn: ' + n.text;
+                let rawUrl = n.videoUrl.trim();
+                let embedUrl = rawUrl;
 
-        // Tự động chuyển đổi link YouTube thường sang link Embed
-        if (rawUrl.includes("youtube.com") || rawUrl.includes("youtu.be")) {
-            embedUrl = rawUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").split('&')[0];
-            contentEl.innerHTML = `
-                <iframe src="${embedUrl}" style="width:100%; height:320px; border-radius:8px; border:none;" allowfullscreen></iframe>
-                <div style="margin-top:12px; text-align:center;">
-                    <a href="${rawUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">
-                        ↗ Mở Video Ở Trang Mới (Tab mới)
-                    </a>
-                </div>`;
-        } else {
-            // Video MP4 direct link hoặc Google Drive
-            contentEl.innerHTML = `
-                <video src="${rawUrl}" controls style="width:100%; max-height:360px; border-radius:8px; background:#000;"></video>
-                <div style="margin-top:12px; text-align:center;">
-                    <a href="${rawUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">
-                        ↗ Mở Video Trong Thẻ Mới
-                    </a>
-                </div>`;
+                if (rawUrl.includes("youtube.com") || rawUrl.includes("youtu.be")) {
+                    embedUrl = rawUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").split('&')[0];
+                    contentEl.innerHTML = `
+                        <iframe src="${embedUrl}" style="width:100%; height:320px; border-radius:8px; border:none;" allowfullscreen></iframe>
+                        <div style="margin-top:12px; text-align:center;">
+                            <a href="${rawUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">
+                                ↗ Mở Video Ở Trang Mới
+                            </a>
+                        </div>`;
+                } else {
+                    contentEl.innerHTML = `
+                        <video src="${rawUrl}" controls style="width:100%; max-height:360px; border-radius:8px; background:#000;"></video>
+                        <div style="margin-top:12px; text-align:center;">
+                            <a href="${rawUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">
+                                ↗ Mở Video Trong Thẻ Mới
+                            </a>
+                        </div>`;
+                }
+            } 
+            else if (type === 'pdf' || type === 'doc') {
+                let fileUrl = n.pdfUrl || (n.docFile ? n.docFile.url : '');
+                if (!fileUrl) { alert("Không tìm thấy đường dẫn tệp tin!"); return; }
+                
+                titleEl.innerText = '📄 Tài Liệu Đính Kèm: ' + n.text;
+                let gviewUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+                
+                contentEl.innerHTML = `
+                    <iframe src="${gviewUrl}" style="width:100%; height:420px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>
+                    <div style="margin-top:12px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+                        <a href="${fileUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">↗ Mở Ở Trang Mới</a>
+                        <a href="${fileUrl}" download style="background:#16a34a; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">💾 Tải Tệp Về Máy</a>
+                    </div>`;
+            }
+            document.getElementById('media-viewer-modal').style.display = 'flex';
         }
-    } 
-    // XỬ LÝ XEM TỆP TÀI LIỆU (PDF, WORD, EXCEL...)
-    else if (type === 'pdf' || type === 'doc') {
-        let fileUrl = n.pdfUrl || (n.docFile ? n.docFile.url : '');
-        if (!fileUrl) {
-            alert("Không tìm thấy đường dẫn tệp tin!");
-            return;
-        }
-        
-        titleEl.innerText = '📄 Tài Liệu Đính Kèm: ' + n.text;
-        
-        // Sử dụng Google Docs Viewer để xem trước tệp Word/Excel/PDF trên Web
-        let gviewUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
-        
-        contentEl.innerHTML = `
-            <iframe src="${gviewUrl}" style="width:100%; height:420px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>
-            <div style="margin-top:12px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
-                <a href="${fileUrl}" target="_blank" style="background:#0284c7; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">
-                    ↗ Mở Ở Trang Mới
-                </a>
-                <a href="${fileUrl}" download style="background:#16a34a; color:#fff; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">
-                    💾 Tải Tệp Về Máy
-                </a>
-            </div>`;
-    }
-    
-    document.getElementById('media-viewer-modal').style.display = 'flex';
-}
 
         function closeMediaModal() { document.getElementById('media-viewer-modal').style.display = 'none'; }
 
-        /* TỐI ƯU HÓA KÉO THAO TÁC CẢM ỨNG SƠ ĐỒ */
+        /* KÉO THAO TÁC CẢM ỨNG SƠ ĐỒ */
         let initialPinchDistance = null;
         let initialScale = scale;
         let isUpdating = false;
