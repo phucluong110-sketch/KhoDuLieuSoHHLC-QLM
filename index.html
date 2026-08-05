@@ -9,6 +9,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
+    <!-- THƯ VIỆN CHUYỂN ĐỔI ẢNH HEIC TỪ IPHONE -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+
     <style>
         :root {
             --primary: #dc2626;         
@@ -172,14 +175,12 @@
             cursor: zoom-in; 
         }
 
-        /* BẢNG DỮ LIỆU CÓ THỦ THUẬT NÚT PHÓNG TO */
         .node-table-wrapper { width: 100%; overflow-x: auto; margin-top: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); background: #ffffff; }
         .node-table-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-size: 10px; font-weight: bold; color: #334155; }
         .node-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px; background: #ffffff; color: #1f2937; }
         .node-table th, .node-table td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; white-space: nowrap; }
         .node-table th { background: #f1f5f9; font-weight: bold; color: #0f172a; }
 
-        /* KHUNG GÓP Ý */
         .node-feedback-box {
             margin-top: 8px; background: #ffffff; color: #1f2937; border-radius: 8px; padding: 8px; font-size: 11px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
@@ -191,7 +192,6 @@
         .feedback-input-group input { flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; outline: none; }
         .feedback-input-group button { background: #0284c7; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; }
 
-        /* NÚT THU PHÓNG */
         .zoom-controls { 
             position: fixed; bottom: 20px; right: 12px; 
             background: #ffffff; border: 2px solid var(--wb-border); 
@@ -283,7 +283,7 @@
         </div>
     </div>
 
-    <!-- MODAL MEDIA & ZOOM BẢNG DỮ LIỆU -->
+    <!-- MODAL MEDIA -->
     <div id="media-viewer-modal" class="modal-overlay">
         <div class="modal-card">
             <button class="modal-close" onclick="closeMediaModal()">✕</button>
@@ -313,6 +313,62 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.database();
+
+        /**
+         * HÀM XỬ LÝ VÀ CHUYỂN ĐỔI TỆP ẢNH (Bao gồm HEIC từ iPhone & Nén ảnh Base64)
+         * Sử dụng hàm này ở trang Quản trị khi Người dùng chọn Upload ảnh.
+         */
+        async function processAndCompressImage(file) {
+            if (!file) return null;
+            let blob = file;
+            const fileName = file.name ? file.name.toLowerCase() : '';
+
+            // 1. Chuyển đổi định dạng .HEIC / .HEIF từ iPhone thành JPEG
+            if (fileName.endsWith('.heic') || fileName.endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif') {
+                try {
+                    const converted = await heic2any({
+                        blob: file,
+                        toType: 'image/jpeg',
+                        quality: 0.8
+                    });
+                    blob = Array.isArray(converted) ? converted[0] : converted;
+                } catch (e) {
+                    console.error('Lỗi chuyển đổi HEIC:', e);
+                    alert('Không thể đọc định dạng HEIC này, vui lòng thử lại!');
+                    return null;
+                }
+            }
+
+            // 2. Phóng to / thu nhỏ & Nén dung lượng ảnh về kích thước tối ưu (~200KB)
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const max_size = 1200; // Chiều rộng/cao tối đa 1200px
+
+                        if (width > height) {
+                            if (width > max_size) { height *= max_size / width; width = max_size; }
+                        } else {
+                            if (height > max_size) { width *= max_size / height; height = max_size; }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Trả về chuỗi ảnh Base64 JPEG đã chuẩn hóa
+                        resolve(canvas.toDataURL('image/jpeg', 0.75));
+                    };
+                };
+            });
+        }
 
         const defaultSettings = {
             primaryColor: '#dc2626', secondaryColor: '#ffffff', logoUrl: '', 
@@ -348,7 +404,7 @@
             document.getElementById('site-banner-subtitle').innerText = s.bannerSubtitle || 'Tra cứu hệ thống - quy trình - thông tin';
             document.getElementById('site-banner-status').innerText = s.bannerStatus || 'Đang hoạt động';
 
-            document.getElementById('header-logo-wrapper').innerHTML = s.logoUrl ? `<img src="${s.logoUrl}" class="brand-logo-img">` : `<span style="background:${s.secondaryColor || '#ffffff'}; color:${s.primaryColor || '#dc2626'}; padding:4px 8px; border-radius:6px; font-weight:800; font-size:12px;">LOGO</span>`;
+            document.getElementById('header-logo-wrapper').innerHTML = (s.logoUrl && s.logoUrl.trim()) ? `<img src="${s.logoUrl}" class="brand-logo-img" onerror="this.style.display='none';">` : `<span style="background:${s.secondaryColor || '#ffffff'}; color:${s.primaryColor || '#dc2626'}; padding:4px 8px; border-radius:6px; font-weight:800; font-size:12px;">LOGO</span>`;
         }
 
         db.ref('machines').on('value', (snapshot) => {
@@ -364,7 +420,7 @@
             const container = document.getElementById('machines-container');
             container.innerHTML = machines.map(m => `
                 <div class="card">
-                    ${m.image ? `<div class="card-media"><img src="${m.image}" alt="${m.name}" onclick="openLightbox(this.src)"></div>` : ''}
+                    ${(m.image && m.image.trim()) ? `<div class="card-media"><img src="${m.image}" alt="${m.name}" onclick="openLightbox(this.src)" onerror="this.parentElement.style.display='none';"></div>` : ''}
                     <div class="card-content">
                         <h3 class="card-title">${m.name}</h3>
                         ${m.desc ? `<p class="card-desc">${m.desc}</p>` : ''}
@@ -474,15 +530,11 @@
                     <button type="button" class="media-badge" style="background:#0284c7; color:#fff; border:none; padding:3px 8px;" onclick="openTableZoomModal('${nodeId}')">🔍 Phóng to bảng</button>
                 </div>
                 <table class="node-table"><thead><tr>`;
-            tableData.headers.forEach(h => {
-                html += `<th>${h || ''}</th>`;
-            });
+            tableData.headers.forEach(h => { html += `<th>${h || ''}</th>`; });
             html += '</tr></thead><tbody>';
             (tableData.rows || []).forEach(row => {
                 html += '<tr>';
-                row.forEach(cell => {
-                    html += `<td>${cell || ''}</td>`;
-                });
+                row.forEach(cell => { html += `<td>${cell || ''}</td>`; });
                 html += '</tr>';
             });
             html += '</tbody></table></div>';
@@ -581,6 +633,11 @@
                 videoBadge = `<span class="media-badge" onclick="viewNodeMedia('${node.id}', 'video')">📹 Xem Video</span>`;
             }
 
+            /* SỬA LỖI ẢNH VỠ: Kiểm tra chuỗi rỗng và tự động ẩn khi link chết bằng onerror */
+            let imageHTML = (node.mediaUrl && node.mediaUrl.trim() !== '') 
+                ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)" onload="drawConnections()" onerror="this.style.display='none'; drawConnections();">` 
+                : '';
+
             return `
                 <div class="c-branch" id="branch-${node.id}">
                     <div class="c-node-card ${lvl}" id="card-${node.id}" style="${customStyle}">
@@ -588,7 +645,7 @@
                             <div class="editable-text">${node.text}</div>
                             ${hasChild ? `<div class="toggle-badge" onclick="toggleExpand('${node.id}')">${node.expanded ? '−' : '+'}</div>` : ''}
                         </div>
-                        ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)" onload="drawConnections()">` : ''}
+                        ${imageHTML}
                         ${renderNodeTableHTML(node.tableData, node.id)}
                         <div class="node-media-badges">
                             ${videoBadge}
@@ -623,13 +680,18 @@
                 videoBadge = `<span class="media-badge" style="color:#0f172a; border-color:#cbd5e1; background:#f1f5f9;" onclick="viewNodeMedia('${node.id}', 'video')">📹 Xem Video Hướng Dẫn</span>`;
             }
 
+            /* SỬA LỖI ẢNH VỠ TẠI CHẾ ĐỘ CỔ ĐIỂN */
+            let imageHTML = (node.mediaUrl && node.mediaUrl.trim() !== '') 
+                ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)" onerror="this.style.display='none';">` 
+                : '';
+
             return `
                 <div style="display:flex; flex-direction:column; gap:8px; background:var(--card-bg); padding:12px; border-radius:10px; border:1px solid var(--card-border); box-shadow:0 2px 8px rgba(0,0,0,0.06);">
                     <div class="classic-card-header ${lvl}" style="${customStyle}" ${clickAction}>
                         <div class="editable-text">${node.text}</div>
                         ${toggleIcon}
                     </div>
-                    ${node.mediaUrl ? `<img src="${node.mediaUrl}" class="node-media" onclick="openLightbox(this.src)">` : ''}
+                    ${imageHTML}
                     ${renderNodeTableHTML(node.tableData, node.id)}
                     <div class="node-media-badges">
                         ${videoBadge}
@@ -730,14 +792,11 @@
                 titleEl.innerText = '📹 ' + videoName + ': ' + (n.text || '');
 
                 let isDrive = videoUrl.includes('drive.google.com') || videoUrl.includes('docs.google.com');
-                let driveHeaderHTML = '';
-                if (isDrive) {
-                    driveHeaderHTML = `
-                        <div style="margin-bottom:12px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:13px; color:#1e40af; word-break:break-all;">
-                            <b>🔗 Đường dẫn Google Drive:</b><br>
-                            <a href="${videoUrl}" target="_blank" style="color:#2563eb; font-weight:bold; text-decoration:underline;">${videoUrl}</a>
-                        </div>`;
-                }
+                let driveHeaderHTML = isDrive ? `
+                    <div style="margin-bottom:12px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:13px; color:#1e40af; word-break:break-all;">
+                        <b>🔗 Đường dẫn Google Drive:</b><br>
+                        <a href="${videoUrl}" target="_blank" style="color:#2563eb; font-weight:bold; text-decoration:underline;">${videoUrl}</a>
+                    </div>` : '';
 
                 if (isDrive) {
                     let embedDriveUrl = getDriveEmbedUrl(videoUrl);
@@ -772,14 +831,11 @@
                 titleEl.innerText = '📄 ' + fileName + ': ' + (n.text || '');
 
                 let isDrive = fileUrl.includes('drive.google.com') || fileUrl.includes('docs.google.com');
-                let driveHeaderHTML = '';
-                if (isDrive) {
-                    driveHeaderHTML = `
-                        <div style="margin-bottom:12px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:13px; color:#1e40af; word-break:break-all;">
-                            <b>🔗 Đường dẫn Google Drive / Docs:</b><br>
-                            <a href="${fileUrl}" target="_blank" style="color:#2563eb; font-weight:bold; text-decoration:underline;">${fileUrl}</a>
-                        </div>`;
-                }
+                let driveHeaderHTML = isDrive ? `
+                    <div style="margin-bottom:12px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:13px; color:#1e40af; word-break:break-all;">
+                        <b>🔗 Đường dẫn Google Drive / Docs:</b><br>
+                        <a href="${fileUrl}" target="_blank" style="color:#2563eb; font-weight:bold; text-decoration:underline;">${fileUrl}</a>
+                    </div>` : '';
 
                 let previewHTML = '';
                 if (isDrive) {
@@ -794,7 +850,7 @@
                     if (fileUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
                         previewHTML = `<iframe src="${fileUrl}" style="width:100%; height:450px; border-radius:8px; border:1px solid #cbd5e1;"></iframe>`;
                     } else if (fileUrl.startsWith('data:image/')) {
-                        previewHTML = `<div style="text-align:center; padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #cbd5e1;"><img src="${fileUrl}" style="max-width:100%; max-height:450px; border-radius:6px; object-fit:contain;"></div>`;
+                        previewHTML = `<div style="text-align:center; padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #cbd5e1;"><img src="${fileUrl}" style="max-width:100%; max-height:450px; border-radius:6px; object-fit:contain;" onerror="this.style.display='none';"></div>`;
                     } else {
                         previewHTML = `<div style="padding:30px; text-align:center; background:#f8fafc; border-radius:8px; border:1px solid #cbd5e1;">
                             <p style="font-size:14px; font-weight:bold; color:#334155; margin-bottom:10px;">📎 Tệp: ${fileName}</p>
@@ -829,7 +885,6 @@
         }
 
         function setupPanZoom() {
-            // SỰ KIỆN CHUỘT (PC)
             canvasViewport.addEventListener('mousedown', e => { 
                 if(e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('.modal-overlay')) return; 
                 isDragging = true; startX = e.clientX - panX; startY = e.clientY - panY; 
@@ -848,7 +903,6 @@
                 updateTransform(); 
             }, {passive: false});
 
-            // SỰ KIỆN CẢM ỨNG (MOBILE - CHẠM & QUẸT / PHÓNG TO 2 NGÓN)
             let initialPinchDist = 0;
             let initialScale = scale;
 
@@ -856,12 +910,10 @@
                 if(e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('.modal-overlay')) return;
 
                 if (e.touches.length === 1) {
-                    // Cảm ứng 1 ngón -> Di chuyển sơ đồ
                     isDragging = true;
                     startX = e.touches[0].clientX - panX;
                     startY = e.touches[0].clientY - panY;
                 } else if (e.touches.length === 2) {
-                    // Cảm ứng 2 ngón -> Chuẩn bị thu phóng (Pinch zoom)
                     isDragging = false;
                     initialPinchDist = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
@@ -875,13 +927,11 @@
                 if(e.target.closest('.c-node-card') || e.target.closest('.wb-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('.modal-overlay')) return;
 
                 if (e.touches.length === 1 && isDragging) {
-                    // Quẹt 1 ngón tay để kéo Canvas
                     e.preventDefault();
                     panX = e.touches[0].clientX - startX;
                     panY = e.touches[0].clientY - startY;
                     updateTransform();
                 } else if (e.touches.length === 2) {
-                    // Chụm/bấu 2 ngón tay để phóng to / thu nhỏ
                     e.preventDefault();
                     const dist = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
@@ -896,12 +946,8 @@
             }, { passive: false });
 
             canvasViewport.addEventListener('touchend', e => {
-                if (e.touches.length < 2) {
-                    initialPinchDist = 0;
-                }
-                if (e.touches.length === 0) {
-                    isDragging = false;
-                }
+                if (e.touches.length < 2) { initialPinchDist = 0; }
+                if (e.touches.length === 0) { isDragging = false; }
             });
         }
 
